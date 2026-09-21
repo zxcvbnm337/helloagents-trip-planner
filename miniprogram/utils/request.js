@@ -281,6 +281,12 @@ function request(options) {
   var data = opt.data || {}
   var timeout = opt.timeout || REQUEST_TIMEOUT
 
+  // 打一行通道日志。三个通道的**外部表现差异很大**（域名校验、超时上限、
+  // 是否需要后端公网可达），而它们由 config.TRANSPORT 一个开关决定 ——
+  // 排查「到底走的哪条路」时没有这行会非常费解：例如 direct 在真机上必然报
+  // 合法域名错，但本地开发一切正常，光看现象分不清是通道选错还是服务没起来。
+  console.log('[request] 通道=' + config.TRANSPORT + ' ' + method + ' ' + url)
+
   if (config.TRANSPORT === 'cloud-function') {
     return viaCloudFunction(url, method, data)
   }
