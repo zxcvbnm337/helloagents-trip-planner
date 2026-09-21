@@ -290,6 +290,15 @@ node tools/test-error-translate.js
 标识文案的**唯一来源**是 `config/index.js` 的 `AI_LABEL`，三个页面都从这里取，
 不在 WXML / Page 里硬编码 —— 改文案只改一处。
 
+模拟器实机渲染效果：
+
+<table>
+<tr>
+<td align="center"><img src="../docs/screenshot-result.png" alt="结果页顶部：概览区小标 + 内容区常驻提示条" width="270" /><br /><sub>结果页顶部：概览区「AI 生成」小标 + 内容区常驻提示条</sub></td>
+<td align="center"><img src="../docs/screenshot-ai-disclaimer.png" alt="结果页底部：完整免责声明" width="270" /><br /><sub>结果页底部：完整免责声明</sub></td>
+</tr>
+</table>
+
 后端侧同时下发**隐式标识**（元数据）：`TripPlan.ai_label`，含 `is_ai_generated` /
 `producer` / `label` / `disclaimer`。客户端据此知道自己拿到的是不是 AI 内容，
 而不是靠约定假设；将来若引入人工编辑的行程，前端可据此决定是否展示标识。

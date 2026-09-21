@@ -7,6 +7,27 @@
 
 ---
 
+## 界面预览
+
+微信小程序版，下图为**模拟器实机渲染截图**（非设计稿）：
+
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="docs/screenshot-index.png" alt="首页：目的地、日期、交通住宿偏好与额外要求" width="290" />
+<br /><sub>首页 —— 目的地 / 日期 / 偏好 + 额外要求，「旅行天数」由日期自动算出</sub>
+</td>
+<td align="center" width="50%">
+<img src="docs/screenshot-result.png" alt="结果页：概览、天气、行程地图与每日安排" width="290" />
+<br /><sub>结果页 —— 概览 + 逐日天气 + 行程地图（marker 为高德返回的真实 gcj02 坐标）</sub>
+</td>
+</tr>
+</table>
+
+> 结果页数据由「4 个 Agent 并发检索 → 行程编排」一次生成，单次约 17~25 秒。
+
+---
+
 ## 一、项目来源与相对原版的改动
 
 > 先说清楚边界，避免混淆贡献。
@@ -152,6 +173,10 @@
   `producer` / `label` / `disclaimer`。客户端因此拿到的是「这段内容是否由 AI 生成」的**事实声明**，
   而不是靠约定假设；将来若引入人工编辑的行程，前端可据此决定是否展示标识。
 
+页面底部常驻的完整免责声明（滚动到哪都看得到）：
+
+<img src="docs/screenshot-ai-disclaimer.png" alt="结果页底部：完整 AI 免责声明" width="290" />
+
 一个容易漏的点：**「复制行程」导出的纯文本也要带标识**。内容一旦被粘贴到微信或文档里，
 就脱离了小程序的控制范围 —— 标识必须跟着内容走，否则收到的人无从知道它出自 AI。
 这条已经写进离线自测，防止后续改动把它悄悄去掉。
@@ -287,6 +312,7 @@ helloagents-trip-planner/
 │   ├── pages/{index,result}/
 │   ├── tools/                             # 两个离线自测脚本（不需要开发者工具）
 │   └── cloudfunctions/proxyTrip/          # 后端中转云函数
+├── docs/                           # README 引用的界面截图（模拟器实机渲染）
 └── README.md
 ```
 
