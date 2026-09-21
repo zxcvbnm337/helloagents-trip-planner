@@ -26,7 +26,7 @@
  *                      需要额外填 CLOUD_CONTAINER_ENV 与 CLOUD_CONTAINER_SERVICE（见下）。
  *                      部署步骤见 backend/DEPLOY-CLOUDRUN.md。
  */
-var TRANSPORT = 'direct'
+var TRANSPORT = 'cloud-container'
 
 /* ============================================================
  * 2. 直连模式（direct）
@@ -78,7 +78,7 @@ var CLOUD_CONTAINER_SERVICE = 'trip-api'
  * 留空则回退使用 CLOUD_ENV —— 仅当你确认两者恰好在同一个环境时才这样用。
  */
 var CLOUD_ENV = 'cloud1-d5gan8twf7e51b2cf'
-var CLOUD_CONTAINER_ENV = ''
+var CLOUD_CONTAINER_ENV = 'trip-planner-d8ghnw2b02413918c'
 
 /* ============================================================
  * 5. 云数据库（行程跨设备可见）
