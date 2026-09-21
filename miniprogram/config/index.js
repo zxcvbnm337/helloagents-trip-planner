@@ -63,9 +63,12 @@ var CLOUD_CONTAINER_SERVICE = 'trip-api'
  *   CLOUD_ENV           = 微信云开发环境 ID（形如 cloud1-xxxxxxxx）
  *                         → 给 wx.cloud.init / wx.cloud.database() 用，即云数据库。
  *
- *   CLOUD_CONTAINER_ENV = 微信云托管环境 ID（形如 prod-xxxxxxxx）
+ *   CLOUD_CONTAINER_ENV = 微信云托管环境 ID（形如 trip-planner-xxxxxxxx）
  *                         → 给 wx.cloud.callContainer 的 config.env 用。
  *                         ⚠️ 该参数必填且不能为空。
+ *                         ⚠️ 新建环境时填的是「环境名称」，平台会在其后追加一串字符
+ *                            组成完整的环境 ID —— 复制时别只抄名称。
+ *                            名称只能用数字 / 小写字母 / -，最多 20 字符（填不了中文）。
  *
  * 之所以拆成两个常量：本项目同时用了云数据库（云开发）与云托管（后端容器），
  * 它们各自的环境 ID 来自不同控制台。早期版本用一个常量喂两处，属于双份真相，

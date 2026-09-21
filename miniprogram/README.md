@@ -125,7 +125,9 @@ python run.py                     # 监听 http://localhost:8000
 启用步骤（简述，完整版含排错表见
 **[`../backend/DEPLOY-CLOUDRUN.md`](../backend/DEPLOY-CLOUDRUN.md)**）：
 
-1. 微信云托管控制台新建环境 → 复制**环境 ID**（形如 `prod-xxxxxxxx`）。
+1. 微信云托管控制台新建环境 —— **名称只能用数字 / 小写字母 / `-`，最多 20 字符**
+   （建议 `trip-planner`），平台会在名称后追加字符组成环境 ID，复制**完整**那个
+   （形如 `trip-planner-xxxxxxxx`）。
 2. 新建服务，服务名填 `trip-api`；上传 `backend/`（Dockerfile 在那一层），端口填 `80`。
 3. 配环境变量（`AMAP_API_KEY` / `LLM_API_KEY` / `AUTH_MODE=openid` / `ENABLE_DOCS=false`），
    健康检查路径填 `/health`，随后按需**关闭公网访问**。
@@ -133,7 +135,7 @@ python run.py                     # 监听 http://localhost:8000
 
    ```js
    var TRANSPORT = 'cloud-container'
-   var CLOUD_CONTAINER_ENV = 'prod-你的云托管环境ID'   // ⚠️ 不是 CLOUD_ENV
+   var CLOUD_CONTAINER_ENV = 'trip-planner-你的云托管环境ID'   // ⚠️ 不是 CLOUD_ENV
    var CLOUD_CONTAINER_SERVICE = 'trip-api'
    ```
 
@@ -170,7 +172,7 @@ python run.py                     # 监听 http://localhost:8000
 | 常量 | 属于 | 形如 | 谁在用 |
 | --- | --- | --- | --- |
 | `CLOUD_ENV` | 微信云开发 | `cloud1-xxxxxxxx` | `wx.cloud.init` / 云数据库（见 5.1） |
-| `CLOUD_CONTAINER_ENV` | 微信云托管 | `prod-xxxxxxxx` | `callContainer`（见上文 3.C） |
+| `CLOUD_CONTAINER_ENV` | 微信云托管 | `<你填的名称>-xxxxxxxx` | `callContainer`（见上文 3.C） |
 
 ```js
 // config/index.js

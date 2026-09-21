@@ -32,7 +32,7 @@
 | 常量（`miniprogram/config/index.js`） | 属于 | 形如 | 谁在用 |
 | --- | --- | --- | --- |
 | `CLOUD_ENV` | 微信云开发 | `cloud1-xxxxxxxx` | `wx.cloud.init` / `wx.cloud.database()`（行程云数据库） |
-| `CLOUD_CONTAINER_ENV` | **微信云托管** | `prod-xxxxxxxx` | `wx.cloud.callContainer({ config: { env } })`（后端请求） |
+| `CLOUD_CONTAINER_ENV` | **微信云托管** | `<你填的名称>-xxxxxxxx` | `wx.cloud.callContainer({ config: { env } })`（后端请求） |
 | `CLOUD_CONTAINER_SERVICE` | 微信云托管 | `trip-api` | callContainer 请求头 `X-WX-SERVICE`（服务名，不是 ID） |
 
 本项目两者**都要用**：云数据库存行程（云开发），后端容器跑规划逻辑（云托管）。
@@ -74,13 +74,25 @@
 
 ### 正确路径
 
-1. 退出引导页，进入控制台主界面（点左上角「微信云托管」logo，
-   或直接访问 **https://cloud.weixin.qq.com/cloudrun**）。
-2. 按提示**新建环境**：这里**只需要填一个环境名称**，不用选模板。
-   微信云托管会在名称后追加一串字符组成 **环境 ID**（形如 `prod-xxxxxxxx`）。
-   建好后把它复制下来 —— 第 7 步要填进 `CLOUD_CONTAINER_ENV`。
+1. 退出引导页，进入控制台主界面。两条路都行：
+   - 点左上角「微信云托管」logo，或直接访问 **https://cloud.weixin.qq.com/cloudrun**；
+   - 或者点模板页底部那行小字里的**「自定义部署」** —— 弹出的对话框标题就叫「自定义部署」，
+     这就是正确入口。
+2. 按提示**新建环境**。这一步**只填一个「环境名称」，不用选模板**。
+
+   ⚠️ 名称有硬性规则（输入框下方的红字，很容易被忽略）：
+
+   > 只能包含数字、小写字母和 `-`，只能以小写字母开头，最多 20 字符
+
+   也就是说**填不了中文**，也不要用下划线或大写字母。本项目建议填 **`trip-planner`**
+   （12 字符、全部合规；刻意与第 3.3 节的服务名 `trip-api` 区分开，免得日后混淆）。
+
+3. 点「确定」后注意：**环境 ID = 你填的名称 + 平台追加的一串字符**，
+   **不等于**你刚填的那个名称。去环境列表或「环境设置 → 基本信息」复制**完整的环境 ID**
+   （名称填了 `trip-planner` 的话，它形如 `trip-planner-1gxxxxxxxx`）。
+   第 7 步要把它填进 `CLOUD_CONTAINER_ENV`。
    （地域选离用户近的，例如华东 / 广州。）
-3. 后续步骤见第 3 节。
+4. 后续步骤见第 3 节。
 
 > 微信云托管控制台与云开发控制台**互不可见**，别去找错地方。
 >
@@ -243,9 +255,9 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 // 1) 换成云托管通道
 var TRANSPORT = 'cloud-container'
 
-// 2) 云托管环境 ID —— 第 2 步从云托管控制台复制的那个
+// 2) 云托管环境 ID —— 第 2 步从云托管控制台复制的那个（完整 ID，含平台追加的字符）
 //    ⚠️ 不是 CLOUD_ENV（那个是云开发环境，给云数据库用的）
-var CLOUD_CONTAINER_ENV = 'prod-你的云托管环境ID'
+var CLOUD_CONTAINER_ENV = 'trip-planner-你的云托管环境ID'
 
 // 3) 服务名 —— 与第 3.3 步新建服务时填的名称一致
 var CLOUD_CONTAINER_SERVICE = 'trip-api'

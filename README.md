@@ -200,7 +200,7 @@
 | 常量 | 属于 | 形如 | 谁在用 |
 | --- | --- | --- | --- |
 | `CLOUD_ENV` | 微信云开发 | `cloud1-xxxxxxxx` | `wx.cloud.init` / 云数据库 |
-| `CLOUD_CONTAINER_ENV` | **微信云托管** | `prod-xxxxxxxx` | `callContainer({ config: { env } })` |
+| `CLOUD_CONTAINER_ENV` | **微信云托管** | `<你填的名称>-xxxxxxxx` | `callContainer({ config: { env } })` |
 
 混用的症状是 `-601002` / 环境不存在。这条是实际踩出来的：早期版本用一个常量喂两处，
 属于双份真相，现已拆开并加了回归用例钉住
