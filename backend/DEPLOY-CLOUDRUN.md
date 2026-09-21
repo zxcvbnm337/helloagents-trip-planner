@@ -141,7 +141,13 @@ app/                ← 全部源码
 
 去掉上面这些之后，整个包**实测只有 28 KB**。
 
-> **最省事的做法**：新建一个空目录，只把前面那五项（`Dockerfile` / `.dockerignore` /
+> ✅ **本仓库已经代打好了**：仓库根目录的 **`trip-api-upload.zip`**（28 KB、21 个条目、
+> `Dockerfile` 位于 zip 根、不含 `venv/` 与 `.env`）。可以直接拿去上传，不必自己再打一次。
+> 它用 Python `zipfile` 生成，`arcname` 刻意不带 `backend/` 前缀 —— 因为云托管会把
+> zip 根当作构建根目录，带前缀反而会让它找不到 `Dockerfile`。
+> （该文件已加入 `.gitignore`，属于构建产物，不入库。）
+
+> **另一种省事做法**：新建一个空目录，只把前面那五项（`Dockerfile` / `.dockerignore` /
 > `requirements.txt` / `run.py` / `app/`）复制进去，然后上传**那个目录** ——
 > 原目录一个文件都不用动，也就不会因为手滑把 `venv/` 带进去。
 
@@ -179,8 +185,8 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 | 界面上的项 | 填什么 | 为什么 |
 | --- | --- | --- |
 | 选择方式 | **手动上传代码包** | 另几种是绑定 Git 仓库 / 拉取镜像，本仓库没往 Git 传就用上传 |
-| 上传方式 | **文件夹**（也支持 zip 压缩包） | 官方两种都支持。⚠️ 选文件夹时**务必先把 `venv/` 与 `.env` 挪出 `backend/`**，否则 280 MB 直接超限（见 3.2） |
-| 选择文件 | 选到 **`backend/` 这一层**（Dockerfile 所在目录） | 官方特意强调「注意一定选到文件夹」 |
+| 上传方式 | **zip 压缩包**（推荐，直接选仓库根目录那个 `trip-api-upload.zip`） | 官方原文：「支持代码文件夹、代码 zip 压缩包两种方式，大小不能超过 2 MiB」。⚠️ 若改用文件夹方式，**务必先把 `venv/` 与 `.env` 挪出 `backend/`**，否则 280 MB 直接超限（见 3.2） |
+| 选择文件 | 选 **`trip-api-upload.zip`**；若用文件夹方式则选到 **`backend/` 这一层**（Dockerfile 所在目录） | 官方特意强调「注意一定选到文件夹」；zip 的根目录要能看到 `Dockerfile` |
 | **端口** | **`80`** | 容器实际监听 `${PORT}`，Dockerfile 的 `ENV PORT=80` 兜底；填 80 与之一致 |
 | 目标目录 | **留空** | 上传的就是构建根目录；若改为上传整个仓库，这里填 `backend` |
 | DockerFile 文件 | `Dockerfile` | 位于构建根目录，无需改路径 |
