@@ -9,7 +9,15 @@
 
 ## 界面预览
 
-微信小程序版，下图为**模拟器实机渲染截图**（非设计稿）：
+**37 秒完整流程演示**（真实录屏，非设计稿）：首页填目的地 / 日期 / 偏好 → 提交 →
+4 个 Agent 并发检索 → 结果页的地图、逐日行程与预算。
+
+![演示](docs/demo.gif)
+
+> 动图已压到 2.1 MB；完整画质与音轨版见 [`docs/demo.mp4`](docs/demo.mp4)（1.7 MB），
+> 封面 [`docs/demo-cover.png`](docs/demo-cover.png)。
+
+下面两张是**模拟器实机渲染截图**：
 
 <table>
 <tr>
@@ -24,7 +32,8 @@
 </tr>
 </table>
 
-> 结果页数据由「4 个 Agent 并发检索 → 行程编排」一次生成，单次约 17~25 秒。
+> 结果页数据由「4 个 Agent 并发检索 → 行程编排」一次生成，单次约 10~25 秒
+> （录屏中上海 1 天为 10 秒）。
 
 ---
 
@@ -47,6 +56,9 @@
 | 8 | 接口**无任何防护**：任何人拿到地址即可调用，一次请求烧掉 4 个 Agent 的 LLM 与高德配额 | 新增 `AUTH_MODE` 三态鉴权（`off` / `api_key` / `openid`）+ 按身份的内存限流，「生成行程」单独收紧阈值 | 38 项离线测试全绿（`backend/tests/`） |
 | 9 | 只有「本机跑通」的说明，没有可交付的部署形态；MCP 冷启动会把首个请求拖到几十秒 | 多阶段 `Dockerfile`，构建期 `uv tool install amap-mcp-server` 预热；`.dockerignore` 确保密钥不进镜像层 | 冷启动成本只在构建期付一次 |
 | 10 | AI 生成的内容没有任何标识，用户无从判断行程出处，也不符合《人工智能生成合成内容标识办法》 | 显式标识（首页 + 结果页顶部 + 底部免责声明）+ 隐式标识（`TripPlan.ai_label` 元数据）；**复制出去的纯文本同样带标识** | 标识随内容走，不会在导出时丢失 |
+| 11 | `npm run build`（`vue-tsc && vite build`）**直接失败**，10 个 TS 报错 | 补 `src/vite-env.d.ts`（`vite/client` 引用 + `ImportMetaEnv` 声明）；`Home.vue` 的交叉类型 `TripFormData & {start_date: Dayjs\|null}` 改为 `Omit` 后重声明；删掉 `Result.vue` 里两个已被内联取代的死函数；地图 Key 缺失时改为**显式报错**而不是带着 `undefined` 去请求 | `3478 modules transformed`，构建全绿 |
+| 12 | `/api/map/*`、`/api/poi/*` 依赖的 `search_poi` / `get_weather` / `plan_route` / `geocode` 全是 `return []` 的 TODO 桩 | 实现 MCP 返回的**逐层剥壳解析**（裸 JSON / 夹带说明文字 / `{"result":...}` 包装 / MCP content 数组），按高德 v3 字段映射到 Pydantic 模型；无坐标的脏 POI 直接丢弃 | 新增 `tests/test_amap_parsing.py`，**37 项全绿**（离线，不联网） |
+| 13 | `travel_days` **双份真相**：Web 版与小程序版各自算一遍再传给后端，后端又独立接收一份 | 服务端加 `model_validator`，**一律按日期区间重算**并覆盖客户端值；不一致只告警（便于发现客户端 bug 而不影响线上） | 客户端传 `travel_days=1` + 3 天日期，被稳定纠正为 3 天 |
 
 ---
 
@@ -236,8 +248,12 @@ python run.py                     # 监听 http://localhost:8000
 自测（**离线**：不起服务、不联网、不消耗任何配额、不读取 `.env`）：
 
 ```bash
-python tests/test_access_control.py     # 38 项：鉴权三态 / 限流 / CORS 交互 / 配置自检
+python tests/test_access_control.py   # 38 项：鉴权三态 / 限流 / CORS 交互 / 配置自检
+python tests/test_amap_parsing.py     # 37 项：高德 MCP 返回解析 / travel_days 收敛
 ```
+
+两个脚本都是**零依赖**的独立入口（不用 pytest），退出码 0 = 全绿，共 **75 项断言**。
+之所以坚持离线：这条链路里最贵的两样东西是 LLM 与高德配额，回归测试不应该消耗它们。
 
 ### 部署（Docker）
 
@@ -330,12 +346,14 @@ helloagents-trip-planner/
 │   │   │       ├── map.py                 # 路线 / 天气
 │   │   │       └── poi.py                 # POI 检索、配图
 │   │   ├── services/
-│   │   │   ├── amap_service.py            # MCP 封装（高德 MCPTool）
+│   │   │   ├── amap_service.py            # MCP 封装 + 返回解析（逐层剥壳，见 tests）
 │   │   │   ├── llm_service.py             # LLM 单例
 │   │   │   └── unsplash_service.py        # 景点配图
-│   │   ├── models/schemas.py              # Pydantic 请求/响应模型
+│   │   ├── models/schemas.py              # Pydantic 模型 + travel_days 收敛
 │   │   └── config.py                      # pydantic-settings 配置
-│   ├── tests/test_access_control.py       # 离线自测（38 项，无需 pytest / 网络 / 密钥）
+│   ├── tests/
+│   │   ├── test_access_control.py         # 离线自测 38 项
+│   │   └── test_amap_parsing.py           # 离线自测 37 项
 │   ├── Dockerfile                         # 多阶段构建 + 构建期预热 MCP
 │   ├── DEPLOY-CLOUDRUN.md                 # 云托管部署 runbook（真机 / 体验版）
 │   ├── .dockerignore                      # 确保 .env 不进镜像层
@@ -343,8 +361,9 @@ helloagents-trip-planner/
 │   └── .env.example
 ├── frontend/                       # Vue 3 + TS + Vite + Ant Design Vue
 │   └── src/
+│       ├── vite-env.d.ts                  # vite/client 引用 + ImportMetaEnv 声明
 │       ├── views/Home.vue                 # 表单
-│       ├── views/Result.vue               # 行程 / 地图 / 预算
+│       ├── views/Result.vue               # 行程 / 地图 / 预算 / 导出
 │       └── services/api.ts
 ├── miniprogram/                    # 微信小程序（等价实现，复用后端）
 │   ├── config/index.js                    # TRANSPORT 开关、BASE_URL、两个云环境 ID、AI 标识文案
@@ -356,7 +375,10 @@ helloagents-trip-planner/
 │   ├── pages/{index,result}/
 │   ├── tools/                             # 两个离线自测脚本（不需要开发者工具）
 │   └── cloudfunctions/proxyTrip/          # 后端中转云函数
-├── docs/                           # README 引用的界面截图（模拟器实机渲染）
+├── docs/                           # 演示录屏 + 界面截图（模拟器实机渲染）
+│   ├── demo.mp4 / demo.gif / demo-cover.png
+│   ├── RESUME.md                   # 一句话定位 + 可直接粘进简历的条目
+│   └── INTERVIEW.md                # 面试讲稿与高频追问的答法
 └── README.md
 ```
 
@@ -366,9 +388,7 @@ helloagents-trip-planner/
 
 如实列出，都是有意留下的边界：
 
-- **REST 侧仍是桩实现**：`/api/map/*`、`/api/poi/*` 的 `search_poi` / `get_weather` / `plan_route` / `geocode`
-  目前 `return [] / {}`（带 TODO）。**真实能力全部走 Agent 链路**，这几个端点主要用于占位与后续扩展。
-- **单次请求同步等待 17~25s**：没有做任务化 + 轮询，用户需停留在页面。生产化应改为
+- **单次请求同步等待 10~25s**：没有做任务化 + 轮询，用户需停留在页面。生产化应改为
   「提交 → 返回任务 ID → 轮询结果」。
 - **限流只在单实例内精确**：计数器在进程内存里，多副本部署下实际放行量会变成「阈值 × 副本数」，
   重启即清零。要精确限流需换成 Redis 之类的共享存储。
@@ -377,14 +397,19 @@ helloagents-trip-planner/
   配置项，配了会让所有 `callContainer` 请求 401），正确做法是**验证后关闭公网访问**。
   该缺口在「公网开着」时是真实存在的，不要长期保留这种状态。
 - **行程缺少归属校验**：按 ID 取行程时不校验调用者身份，尚未做「只能看自己的行程」的细粒度授权。
-- **`travel_days` 存在双份真相**：前端由日期差值算出、后端独立接收，需要收敛为单一来源。
-- **导出能力降级**：小程序侧未实现图片版行程（可用 canvas 2d 手绘，成本较高）。
+- **导出能力降级**：小程序没有 DOM，`html2canvas` / `jsPDF` 用不了，因此小程序侧未实现图片版
+  行程导出（可用 canvas 2d 手绘，成本较高），只提供复制纯文本 + 转发分享。
+  Web 版导出 PDF 时地图是 `toDataURL` 的静态快照——高德 2.0 的 3D 视图底层是 WebGL，
+  未开 `preserveDrawingBuffer` 时有拿到空白画布的风险。
 - **体验版只能给体验成员看**：个人主体约 15 个名额，二维码印在简历上面试官是扫不开的。
-  对外展示需改用仓库 `docs/` 里的截图 / 录屏，或走正式发布（需小程序审核）。
-- **`miniprogram/config/index.js` 默认仍是 `TRANSPORT = 'direct'`**：本地开发开箱即用，
-  但上传体验版前必须改成 `'cloud-container'` 并填入云托管环境 ID，否则真机仍会报合法域名错误。
-- **Pydantic v1 风格残留**：`Field(example=...)` 与 `class Config` 在 v2 下应改为
-  `json_schema_extra` / `model_config`。
+  对外展示请用本 README 里的录屏 / 截图，或走正式发布（需小程序审核）。
+- **`miniprogram/config/index.js` 的 `TRANSPORT` 已置于 `cloud-container`**：这是为了让**
+  体验版在真机上开箱可用**，同时该文件里也填了云托管环境 ID。本地开发若想直连
+  `localhost:8000`，需要把 `TRANSPORT` 改回 `'direct'`（改一个字符串即可，页面代码不动）。
+- **主包体积告警**：`vite build` 提示单个 chunk > 500 kB（Ant Design Vue 全量引入所致）。
+  生产化应改为按需引入或 `manualChunks` 拆分。
+- **未接入 CI**：当前靠 `backend/tests/*.py` 与 `miniprogram/tools/*.js` 手动运行，
+  没有 GitHub Actions 之类的流水线把关。
 
 ---
 
