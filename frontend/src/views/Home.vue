@@ -216,7 +216,16 @@ const loading = ref(false)
 const loadingProgress = ref(0)
 const loadingStatus = ref('')
 
-const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: Dayjs | null }>({
+// TripFormData 是「提交给后端」的形状，start_date/end_date 为字符串；
+// 而表单内部要拿 DatePicker 的 Dayjs 对象（便于 diff 算天数）。
+// 所以先 Omit 掉这两个字段再重新声明，避免出现 `string & Dayjs` 这种交叉类型
+// —— 它会让 `null` 既不是 string 也不是 Dayjs，赋值直接编译不过。
+type TripFormModel = Omit<TripFormData, 'start_date' | 'end_date'> & {
+  start_date: Dayjs | null
+  end_date: Dayjs | null
+}
+
+const formData = reactive<TripFormModel>({
   city: '',
   start_date: null,
   end_date: null,

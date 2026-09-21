@@ -786,54 +786,21 @@ const exportAsPDF = async () => {
   }
 }
 
-// 截取地图图片
-const captureMapImage = async () => {
-  if (!map) return
-
-  try {
-    // 获取地图容器
-    const mapContainer = document.getElementById('amap-container')
-    if (!mapContainer) return
-
-    // 使用高德地图的截图功能
-    const mapCanvas = mapContainer.querySelector('canvas')
-    if (mapCanvas) {
-      // 创建一个img元素替换地图容器
-      const img = document.createElement('img')
-      img.src = mapCanvas.toDataURL('image/png')
-      img.style.width = '100%'
-      img.style.height = '500px'
-      img.style.objectFit = 'cover'
-      img.id = 'map-snapshot'
-
-      // 隐藏原地图,显示截图
-      mapContainer.style.display = 'none'
-      mapContainer.parentElement?.appendChild(img)
-    }
-  } catch (error) {
-    console.error('截取地图失败:', error)
-  }
-}
-
-// 恢复地图
-const restoreMap = () => {
-  const mapContainer = document.getElementById('amap-container')
-  const snapshot = document.getElementById('map-snapshot')
-
-  if (mapContainer) {
-    mapContainer.style.display = 'block'
-  }
-
-  if (snapshot) {
-    snapshot.remove()
-  }
-}
-
 // 初始化地图
 const initMap = async () => {
+  // 高德 JS API 的 Key 是「Web 端(JS API)」类型，与后端用的 Web 服务 Key 不是同一把。
+  // 缺失时明确报错并退出——否则 AMapLoader 会以 key=undefined 去请求，
+  // 用户只看到一张灰图，排查成本远高于这里直接说清楚。
+  const amapJsKey = import.meta.env.VITE_AMAP_WEB_JS_KEY
+  if (!amapJsKey) {
+    console.error('缺少 VITE_AMAP_WEB_JS_KEY，地图无法加载')
+    message.error('未配置高德 Web 端 Key（VITE_AMAP_WEB_JS_KEY），地图不可用')
+    return
+  }
+
   try {
     const AMap = await AMapLoader.load({
-      key: import.meta.env.VITE_AMAP_WEB_JS_KEY,  // 高德地图Web端(JS API) Key
+      key: amapJsKey,
       version: '2.0',
       plugins: ['AMap.Marker', 'AMap.Polyline', 'AMap.InfoWindow']
     })
