@@ -127,7 +127,9 @@ def validate_config():
     if auth_mode == "openid" and not settings.gateway_secret:
         warnings.append(
             "AUTH_MODE=openid 但未配置 GATEWAY_SECRET —— 若本服务可从公网直连，"
-            "X-WX-OPENID 可被伪造，建议补上该密钥"
+            "X-WX-OPENID 可被伪造。⚠️ 但微信云托管网关无法注入 X-Gateway-Secret"
+            "（没有自定义请求头的配置项），因此该场景下不要配 GATEWAY_SECRET，"
+            "应在验证通过后关闭公网访问。此警告在云托管下可忽略。"
         )
     if settings.enable_docs and not settings.debug:
         warnings.append("非调试模式下仍开放 /docs 与 /redoc，对外部署建议设 ENABLE_DOCS=false")

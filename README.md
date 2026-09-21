@@ -160,6 +160,10 @@
 
 - **`openid` 模式额外提供 `GATEWAY_SECRET`**。`X-WX-OPENID` 由网关注入，但若服务同时能从公网直连，
   这个头就是可伪造的——多配一个只有网关知道的密钥，才能把「来自网关」变成一次真实的凭据校验。
+  ⚠️ **但微信云托管场景下不要真的去配它**：云托管网关只注入固定的几个 `X-WX-*` 头，
+  **没有「注入自定义请求头」的配置项**，配了 `GATEWAY_SECRET` 会导致所有 `callContainer`
+  请求都缺 `X-Gateway-Secret` 而 401。正确的收尾动作是**验证完关掉公网访问**
+  （见 `backend/DEPLOY-CLOUDRUN.md` 第 4、6 节）。该开关保留给「自己前面还有一层能注入头的网关」的场景。
 - **密钥比较走 `secrets.compare_digest`**，避免通过响应耗时逐位猜测密钥；限流的内存 key 用哈希指纹，
   密钥原文不进入内存与日志。
 
@@ -296,13 +300,13 @@ node tools/check-plan-transform.js   # 离线自测，不依赖开发者工具
 | --- | --- | --- |
 | `AMAP_API_KEY` | ✅ | 高德** Web 服务** API Key，供 MCP 使用 |
 | `LLM_API_KEY` | ✅ | 大模型 Key（也兼容 `OPENAI_API_KEY`） |
-| `LLM_BASE_URL` | 可选 | 兼容 OpenAI 协议的服务地址（如 DeepSeek） |
+| `LLM_BASE_URL` | 可选* | 兼容 OpenAI 协议的服务地址。**用 DeepSeek 时必填**（`https://api.deepseek.com`）—— 否则自动探测会回落到 OpenAI 地址，拿 DeepSeek 的 Key 必然 401 |
 | `LLM_MODEL_ID` | 可选 | 模型名 |
-| `CORS_ORIGINS` | 可选 | 逗号分隔，默认放行本地 5173 / 3000 |
+| `CORS_ORIGINS` | 可选 | 逗号分隔，默认放行本地 5173 / 3000。小程序 `callContainer` 通道不需要（不是浏览器请求） |
 | `UNSPLASH_ACCESS_KEY` | 可选 | 景点配图，未配置则跳过 |
 | `AUTH_MODE` | 可选 | `off`（默认）/ `api_key` / `openid`，见「设计决策 7」 |
 | `API_KEYS` | 条件 | `AUTH_MODE=api_key` 时必填。逗号分隔以支持轮换期新旧并存 |
-| `GATEWAY_SECRET` | 可选 | `AUTH_MODE=openid` 时强烈建议填，防止 `X-WX-OPENID` 被伪造 |
+| `GATEWAY_SECRET` | 可选 | ⚠️ **微信云托管场景下不要配**（网关无法注入 `X-Gateway-Secret`，配了全部请求 401）。仅适用于「自己前面还有一层能注入自定义头」的部署。云托管下改用「关公网访问」 |
 | `RATE_LIMIT_PER_MINUTE` | 可选 | 默认 30。**设为 0 表示不限流** |
 | `RATE_LIMIT_PLAN_PER_MINUTE` | 可选 | 默认 6。`/api/trip/plan` 的独立阈值 |
 | `ENABLE_DOCS` | 可选 | 默认 `true`。对外部署建议设 `false`，减少信息暴露 |
@@ -369,7 +373,9 @@ helloagents-trip-planner/
 - **限流只在单实例内精确**：计数器在进程内存里，多副本部署下实际放行量会变成「阈值 × 副本数」，
   重启即清零。要精确限流需换成 Redis 之类的共享存储。
 - **`openid` 模式的信任边界**：身份来自云托管网关注入的 `X-WX-OPENID`；若服务同时可从公网直连，
-  该头可被伪造，必须配置 `GATEWAY_SECRET` 才能闭合这个缺口。
+  该头可被伪造。**微信云托管下无法用 `GATEWAY_SECRET` 闭合这个缺口**（网关没有注入自定义头的
+  配置项，配了会让所有 `callContainer` 请求 401），正确做法是**验证后关闭公网访问**。
+  该缺口在「公网开着」时是真实存在的，不要长期保留这种状态。
 - **行程缺少归属校验**：按 ID 取行程时不校验调用者身份，尚未做「只能看自己的行程」的细粒度授权。
 - **`travel_days` 存在双份真相**：前端由日期差值算出、后端独立接收，需要收敛为单一来源。
 - **导出能力降级**：小程序侧未实现图片版行程（可用 canvas 2d 手绘，成本较高）。

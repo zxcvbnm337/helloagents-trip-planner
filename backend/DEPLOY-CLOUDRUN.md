@@ -221,17 +221,65 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 
 | 变量 | 值 | 说明 |
 | --- | --- | --- |
-| `AMAP_API_KEY` | 你的高德 Key | **必填**，缺失时启动阶段 `validate_config()` 会直接抛错 |
-| `LLM_API_KEY` | 你的 DeepSeek Key | 缺失只告警、不阻断，但 LLM 功能不可用 |
-| `LLM_MODEL_ID` | `deepseek-chat` | 可选 |
-| `LLM_BASE_URL` | `https://api.deepseek.com` | 可选 |
-| `PORT` | `80` | 与第 3.3 节的端口保持一致 |
+| `AMAP_API_KEY` | 你的高德 Key | **必填**。缺失时启动阶段 `validate_config()` 直接 `raise`，容器起不来 |
+| `LLM_API_KEY` | 你的 DeepSeek Key | **必填**。缺失只告警不阻断，但生成行程时必然失败 |
+| `LLM_BASE_URL` | `https://api.deepseek.com` | **必填**。见下「为什么 `LLM_BASE_URL` 不能省」 |
+| `LLM_MODEL_ID` | `deepseek-chat` | 建议显式写。不填时会因 provider 判定为 deepseek 而自动取同名默认值 |
 | `AUTH_MODE` | **`openid`** | 见下 |
-| `GATEWAY_SECRET` | 一串随机字符串 | `AUTH_MODE=openid` 时建议填，见下 |
 | `ENABLE_DOCS` | **`false`** | 关掉 `/docs`、`/redoc`、`/openapi.json`，减少接口结构暴露 |
-| `RATE_LIMIT_PER_MINUTE` | `30` | 按身份限流 |
-| `RATE_LIMIT_PLAN_PER_MINUTE` | `6` | 「生成行程」是昂贵端点（4 个 Agent + LLM + 高德配额），单独收紧 |
-| `LOG_LEVEL` | `INFO` | —— |
+| `RATE_LIMIT_PER_MINUTE` | `30` | 不填即用默认值 |
+| `RATE_LIMIT_PLAN_PER_MINUTE` | `6` | 不填即用默认值 |
+| `LOG_LEVEL` | `INFO` | 不填即用默认值 |
+
+#### ⚠️ 三个「千万别填」的变量
+
+**1. 不要填 `PORT`**
+
+云托管这边「端口」填的是 `80`，而 Dockerfile 里已有 `ENV PORT=80` 兜底。
+`.env.example` 里的 `PORT=8000` 是**给本地开发用的** —— 照抄进去，容器就会监听 8000，
+而平台在探活 80，健康检查永远不会通过，表现为「构建成功但服务一直起不来」。
+同理 `HOST` 也不用填：启动命令里已经写死 `--host 0.0.0.0`。
+
+**2. 不要填 `GATEWAY_SECRET`**
+
+这一条很反直觉，但**填了会把服务整个搞挂**。
+
+`AccessGuardMiddleware` 的逻辑是：只要 `GATEWAY_SECRET` 非空，就要求**每个请求**都带
+`X-Gateway-Secret` 头并与它比对（`security.py` 中 `resolve_identity()`）。而微信云托管的网关
+**只会注入 `X-WX-OPENID` / `X-WX-APPID` / `X-WX-UNIONID` / `X-WX-ENV` / `X-WX-SOURCE` /
+`X-Forwarded-For` 这几个固定的头，没有「注入自定义请求头」的配置项**。
+结果就是：小程序发来的每个 `callContainer` 请求都缺这个头 → 全部 401。
+
+那让小程序自己在 `header` 里带上呢？也不行 —— 值会硬编码在小程序代码里，
+拿到代码就能复制，**它就不再是密钥了**。
+
+所以正确的做法不是配它，而是**第 6 节：验证通过后关掉公网访问**。
+公网一关，外部就没有伪造 `X-WX-OPENID` 的入口了，`AUTH_MODE=openid` 单靠它已经足够。
+
+**3. 不用填 `AMAP_MAPS_API_KEY`**
+
+容器里的 MCP 子进程需要的确实是这个名字，但**我们的代码会自动改名转发** ——
+`amap_service.py` 里是 `env={"AMAP_MAPS_API_KEY": settings.amap_api_key}`。
+控制台只填 `AMAP_API_KEY` 就够了，多填一份反而变成两处真相。
+
+#### 为什么 `LLM_BASE_URL` 不能省
+
+`HelloAgentsLLM` 用「provider 自动探测」决定连哪个服务（`hello_agents/core/llm.py`）。
+探测顺序是：特定环境变量 → 密钥格式 → **base_url** → 兜底 `auto`。
+
+DeepSeek 的 Key 是 `sk-` + 32 位十六进制（约 35 字符），**不满足**探测代码里
+`startswith("sk-") and len > 50` 那条 OpenAI/DeepSeek 分支，所以密钥格式判断会跳过它，
+落到「看 base_url」这一步：
+
+- 配了 `LLM_BASE_URL=https://api.deepseek.com` → provider = `deepseek` ✓
+- 没配 → provider = `auto` → `_resolve_credentials()` 里 `base_url` 为 `None`
+  → OpenAI SDK 回落到自己的默认值 `https://api.openai.com/v1`
+  → **拿 DeepSeek 的 Key 去打 OpenAI，必然 401。**
+
+这也解释了为什么本地 `backend/.env` 一直好使 —— 它本来就写着 `LLM_BASE_URL=https://api.deepseek.com`，
+而容器里没有 `.env`（被 `.dockerignore` 排除了），所以这些值必须在控制台显式补上。
+
+> 另外，`CORS_ORIGINS` 不用配：`callContainer` 不是浏览器请求，不带 `Origin` 头。
 
 ### 为什么 `AUTH_MODE=openid`
 
@@ -241,12 +289,9 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 - 每个用户**独立限流**（`X-WX-OPENID` → 独立计数桶），不会因为别人刷而互相影响；
 - 不再是「谁都能调」，避免 LLM 与高德配额被白嫖。
 
-⚠️ **`GATEWAY_SECRET` 的必要性**：`X-WX-OPENID` 由云托管网关注入，但
-**如果服务同时开了公网访问，这个头是可以被伪造的**。所以：
-
-- 第 6 节关了公网访问 → 单靠 `openid` 已足够；
-- 若保留公网访问 → **必须**配 `GATEWAY_SECRET`，此时请求需额外带 `X-Gateway-Secret`
-  才放行（`AccessGuardMiddleware` 会用常数时间比较校验）。
+⚠️ **但仍要知道它的边界**：`X-WX-OPENID` 由微信调用链路注入并做过校验，
+**走 `callContainer` 时是可信的**；但如果你开了公网访问，任何人都能用 `curl` 伪造这个头直连。
+因此**收尾动作是关掉公网访问**（第 6 节），而不是配 `GATEWAY_SECRET`（原因见上）。
 
 两者是「或」的关系，但**不能都不做**。
 
@@ -287,7 +332,12 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 ⚠️ **关闭公网访问不会影响小程序** —— 这是最容易担心的点，但 `callContainer` 不走公网域名。
 
 代价：你自己也无法用 `curl` 从公网调它做验证 —— 验证改走「微信开发者工具 → 预览 / 体验版」。
-若确实需要公网调试，**临时**打开，同时**务必**配上 `GATEWAY_SECRET`。
+
+⚠️ **如果你确实需要临时开着公网调试**：那就**接受「任何知道域名的人都能伪造 `X-WX-OPENID` 直连」**
+这个事实，把 `AUTH_MODE` 临时降到 `api_key`（配一个随机 `API_KEYS`，调试时自己带上），
+调完立刻改回 `openid` + 关公网。
+**不要试图用 `GATEWAY_SECRET` 闭合这个缺口** —— 云托管网关没有注入自定义头的配置项，
+配了它只会让小程序的所有请求 401（详见第 4 节）。
 
 > 顺带一提，默认公网域名**只适合测试**。官方明确说「默认公网域名性能有限制，仅能支持接口
 > 测试使用，请勿用于正式生产环境」，且「微信云托管对公网域名**不具备安全防护能力**」
