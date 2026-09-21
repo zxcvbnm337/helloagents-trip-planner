@@ -182,6 +182,20 @@ zip -r ../trip-api.zip . -x '.env' -x 'venv/*' -x '.venv/*' -x '__pycache__/*' -
 填完点**「发布」**：构建 + 部署整体约 3 分钟。顺序是先「构建」（装依赖、预热 MCP）再「部署」。
 中途失败就把页面上的日志复制出来定位。之后要改环境变量，去「服务设置 → 基本信息」。
 
+**若改用「绑定 Git 仓库」方式**（好处是能生成流水线，以后 push 后一键重发），多三个前提：
+
+- ⚠️ 云托管**只支持公开仓库**（界面会提示「私有仓库请使用 CLI 工具」）。
+- ⚠️ **先确认绑的是哪份代码。** 打开 `https://github.com/<owner>/<repo>/tree/main/backend`
+  看一眼 —— 如果那里**没有 `Dockerfile`**，说明绑到的不是要部署的那份代码，构建必然失败。
+  （这个坑真实发生过：本地代码是最新的，但绑上去的 GitHub 仓库还停在几天前，
+  `backend/` 下只有 `app/`、`requirements.txt`、`run.py`、`.env.example`。）
+- ⚠️ **Dockerfile 在 `backend/` 子目录，不在仓库根目录**，所以必须展开**「高级设置」**
+  把「目标目录 / 构建目录」填成 `backend`。不填就会在根目录找 Dockerfile，直接构建失败
+  ——本仓库根目录只有 `.gitignore` / `README.md` / `backend` / `docs` / `frontend` / `miniprogram`。
+
+> 拿不准就用**「手动上传代码包」**：它把 `backend/` 直接交给平台，不经过任何 Git 中间层，
+> 也不需要「目标目录」之外的额外配置。跑通之后再回头配流水线也不迟。
+
 > 构建耗时主要来自 `pip install` 与构建期 `uv tool install amap-mcp-server`。
 > **MCP 预热刻意放在构建期**：`uvx` 首次运行要现下载包并建环境，会把「第一笔请求」
 > 拖长几十秒，很容易撞上平台超时；先装好就只付这一次。
