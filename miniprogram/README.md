@@ -316,14 +316,27 @@ node tools/test-error-translate.js
 | 语法 | `miniprogram/**/*.js`（12 个，含云函数与 `tools/` 两个自测脚本）全部 `node --check` 通过 |
 | 离线自测 · 视图模型 | `node tools/check-plan-transform.js` 全部通过（含新增的「复制文本带 AI 标识」2 项断言） |
 | 离线自测 · 错误翻译 | `node tools/test-error-translate.js` 全部通过（13 项，样本取自实测原始报错） |
+| AI 标识（模拟器实测） | 18 项全通过：首屏可见（概览区 `.hero-ai-tag` top=101、内容区 `.ai-notice` top=236，视口高 753）、底部 `.ai-disclaimer` 高度 62px；**真点「复制行程」并包装 `wx.setClipboardData` 抓取实际剪贴板内容**，确认末尾为 `—— AI 生成 ——` + 免责声明 |
 
-### 验证手法上的三个坑（都会让结论失真）
+### 验证手法上的几个坑（都会让结论失真）
 
 1. **不要用 `mockWxMethod` 验证弹窗。** 它会把被 mock 的 API 变成空操作，
    于是得出「弹窗没出现」的假结论。正确做法是**包一层**：保留原调用，只额外记录入参。
+   验证「复制行程」是否带上 AI 标识用的是同一个套路 —— 包住 `wx.setClipboardData`
+   抓真实入参，比直接调 `buildPlainText()` 更有说服力（后者绕过了页面真实链路）。
 2. **原生对话框不在 WXML 树里**，`page.$$` 查不到它。要眼见为实就截图。
 3. **`evaluate` 挂在 `mini` 上，不在 `page` 上。** 写成 `page.evaluate` 会直接
    `TypeError: page.evaluate is not a function`。
+4. **`mini.evaluate` 里传的函数必须自足**：它会被序列化后送到页面上下文执行，
+   **捕获不到外部作用域的变量**（探针函数里只能引用 `wx` 与全局对象）。
+5. **小程序运行时不能用绝对路径 `require`。** 写 `require('/utils/plan.js')` 会报
+   `module '/utils/plan.js' is not defined` —— 运行时要求相对路径。
+   想在自动化里复用一个模块，正确做法是**驱动真实 UI**，而不是在探针里 `require`。
+6. **断言失败时先怀疑断言本身。** 本次两个失败案例都是测试写错而非代码有问题：
+   ① 断言「401 响应带 CORS 头」却没发送 `Origin`（CORSMiddleware 只在请求含 `Origin`
+   时才追加响应头）；② 断言「首页 AI 标识在首屏内」，但首页并没有 AI 生成的内容，
+   标识是**提交前告知**，刻意的位置就是提交按钮正下方（用户本来就要滚到按钮处）。
+   若强行提到首屏，只会让顶部多一块与当前操作无关的提示。
 
 ## 控制台常见信息（都不是本项目的缺陷）
 
