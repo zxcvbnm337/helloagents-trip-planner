@@ -118,7 +118,7 @@
 | --- | --- | --- | --- |
 | `direct` | `wx.request` | 本地开发（默认） | ❌ 必须是备案 https 域名并登记白名单 |
 | `cloud-function` | `wx.cloud.callFunction` | 绕开 request 合法域名白名单 | ⚠️ 后端仍需公网可达，且超时上限仅 60s |
-| `cloud-container` | `wx.cloud.callContainer` | 后端部署在微信云托管 | ✅ **免备案域名**，走微信内网 |
+| `cloud-container` | `wx.cloud.callContainer` | 后端部署在微信云托管 | ✅ **免备案域名**，走微信私有链路 |
 
 三通道的返回值契约完全一致，统一收拢在 `utils/request.js`，**上层页面无感知** ——
 切通道只改一个字符串，页面代码一行不动。
@@ -261,7 +261,8 @@ docker run --rm -p 8000:8000 --env-file backend/.env -e PORT=8000 trip-api
 
 `direct` 通道在真机上**不可能成立**：`localhost` 指的是手机自己，且 request 合法域名强制校验
 （必须是已备案的 https 域名）。本项目用 `cloud-container` 通道绕开整件事 ——
-请求走**微信内网**，不需要域名、不需要备案、不需要等审核，还可在控制台关掉公网访问天然防白嫖。
+请求走**微信与腾讯云之间的特殊私有链路**（官方原话：「不受公网开关影响」），不需要域名、
+不需要备案、不需要等审核；云托管的**公网 / 内网两个访问开关都可以关掉**，天然防白嫖。
 
 完整 runbook 见 **[`backend/DEPLOY-CLOUDRUN.md`](backend/DEPLOY-CLOUDRUN.md)**，覆盖：
 

@@ -130,7 +130,9 @@ python run.py                     # 监听 http://localhost:8000
    （形如 `trip-planner-xxxxxxxx`）。
 2. 新建服务，服务名填 `trip-api`；上传 `backend/`（Dockerfile 在那一层），端口填 `80`。
 3. 配环境变量（`AMAP_API_KEY` / `LLM_API_KEY` / `AUTH_MODE=openid` / `ENABLE_DOCS=false`），
-   健康检查路径填 `/health`，随后按需**关闭公网访问**。
+   健康检查路径填 `/health`。两个访问开关里 **内网访问不用开**（它只服务于同环境内多服务互调），
+   **公网访问先开着、验证完再关** —— `callContainer` 走的是微信与腾讯云之间的私有链路，
+   **不受这两个开关影响**。
 4. 改 `config/index.js` 三处：
 
    ```js

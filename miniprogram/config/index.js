@@ -18,10 +18,11 @@
  *
  * 'cloud-container' —— 经微信云托管 callContainer 调用，后端容器跑在微信云托管里。
  *                      真机 / 体验版要跑通，这是最省事的一条路：
- *                        · callContainer 走微信内网，**不需要在小程序后台配 request 合法域名**，
+ *                        · callContainer 走**微信与腾讯云之间的特殊私有链路**，
+ *                          **不需要在小程序后台配 request 合法域名**，
  *                          也就**不需要备案域名**（这正是 `direct` 在真机上走不通的原因）；
- *                        · 可以在云托管控制台**关掉公网访问**，只有本小程序能调，
- *                          天然防白嫖，不必额外依赖 AUTH_MODE。
+ *                        · 这条私有链路**不受云托管「公网访问 / 内网访问」两个开关影响**，
+ *                          所以两个开关最后都可以关掉，只有本小程序调得通，天然防白嫖。
  *                      需要额外填 CLOUD_CONTAINER_ENV 与 CLOUD_CONTAINER_SERVICE（见下）。
  *                      部署步骤见 backend/DEPLOY-CLOUDRUN.md。
  */
