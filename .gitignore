@@ -58,6 +58,7 @@ Thumbs.db
 desktop.ini
 
 # ---------- 构建产物 / 交付包 ----------
-# 给微信云托管「手动上传代码包」用的干净 zip，随时可由 backend/ 重新打出来，
+# 给微信云托管「手动上传代码包」用的干净副本，随时可由 backend/ 重新打出来，
 # 且它本身是「backend 去掉 venv/.env」的副本 —— 入库只会造成两份真相。
 trip-api-upload.zip
+backend-deploy/
