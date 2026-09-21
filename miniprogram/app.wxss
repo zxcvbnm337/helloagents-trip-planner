@@ -1,0 +1,128 @@
+/* app.wxss —— 全局样式与设计变量 */
+/* 设计基准宽度 750rpx，主色沿用原 Web 版紫蓝渐变 */
+
+page {
+  background: #f2f4f8;
+  color: #1f2430;
+  font-size: 28rpx;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+view,
+text,
+input,
+textarea,
+button {
+  box-sizing: border-box;
+}
+
+.container {
+  padding: 24rpx 24rpx 48rpx;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(31, 36, 48, 0.06);
+}
+
+.section-title {
+  position: relative;
+  padding-left: 20rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2430;
+  margin-bottom: 24rpx;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8rpx;
+  width: 8rpx;
+  height: 32rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+.sub-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #5a6273;
+  margin: 28rpx 0 16rpx;
+}
+
+/* ---------- 文本辅助 ---------- */
+.muted {
+  color: #8b93a5;
+}
+
+.dot {
+  margin: 0 12rpx;
+  color: #c3c9d6;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 按钮 ---------- */
+.btn-primary,
+.btn-ghost {
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 12rpx 28rpx rgba(102, 126, 234, 0.35);
+}
+
+.btn-ghost {
+  color: #5b54d6;
+  background: #ffffff;
+  border: 2rpx solid #dfe3ee;
+}
+
+.btn-primary::after,
+.btn-ghost::after {
+  border: none;
+}
+
+.btn-primary[disabled],
+.btn-ghost[disabled] {
+  opacity: 0.6;
+}
+
+/* ---------- 标签 ---------- */
+.tag {
+  display: inline-block;
+  padding: 6rpx 20rpx;
+  margin: 0 16rpx 16rpx 0;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  color: #5b54d6;
+  background: #f0f1fe;
+}
+
+/* ---------- 空状态 ---------- */
+.empty {
+  padding: 120rpx 40rpx;
+  text-align: center;
+  color: #8b93a5;
+  font-size: 28rpx;
+}

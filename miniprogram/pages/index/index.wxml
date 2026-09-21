@@ -1,0 +1,152 @@
+<view class="page">
+
+  <block wx:if="{{!loading}}">
+
+    <view class="hero">
+      <view class="hero-title">智能旅行助手</view>
+      <view class="hero-subtitle">填好偏好，AI 依次完成景点搜索、天气查询、酒店推荐与行程编排</view>
+    </view>
+
+    <view class="history-bar" wx:if="{{hasHistory}}">
+      <view class="history-main" bindtap="goHistory">
+        <view class="history-label">上次生成的行程<text class="history-tag">{{historySource === 'cloud' ? '已同步云端' : '仅本机'}}</text></view>
+        <view class="history-value">{{historyText}}</view>
+      </view>
+      <view class="history-clear" catchtap="onClearHistory">清除</view>
+      <view class="history-arrow" bindtap="goHistory">查看</view>
+    </view>
+
+    <view class="container">
+
+      <!-- 目的地与日期 -->
+      <view class="card">
+        <view class="section-title">目的地与日期</view>
+
+        <view class="field">
+          <view class="field-label">目的地城市</view>
+          <input
+            class="field-input"
+            value="{{city}}"
+            placeholder="例如：北京"
+            placeholder-class="ph"
+            maxlength="20"
+            bindinput="onCityInput"
+          />
+        </view>
+
+        <view class="field-row">
+          <view class="field field-half">
+            <view class="field-label">开始日期</view>
+            <picker
+              mode="date"
+              value="{{startDate}}"
+              start="{{minDate}}"
+              end="{{maxDate}}"
+              bindchange="onStartDateChange"
+            >
+              <view class="picker-value {{startDate ? '' : 'picker-placeholder'}}">{{startDate ? startDate : '请选择'}}</view>
+            </picker>
+          </view>
+
+          <view class="field field-half">
+            <view class="field-label">结束日期</view>
+            <picker
+              mode="date"
+              value="{{endDate}}"
+              start="{{startDate ? startDate : minDate}}"
+              end="{{maxDate}}"
+              bindchange="onEndDateChange"
+            >
+              <view class="picker-value {{endDate ? '' : 'picker-placeholder'}}">{{endDate ? endDate : '请选择'}}</view>
+            </picker>
+          </view>
+        </view>
+
+        <view class="days-bar">
+          <text class="days-bar-label">旅行天数</text>
+          <text class="days-bar-value">{{travelDaysText}}</text>
+        </view>
+        <view class="field-hint">由开始与结束日期自动计算，上限 30 天</view>
+      </view>
+
+      <!-- 偏好设置 -->
+      <view class="card">
+        <view class="section-title">偏好设置</view>
+
+        <view class="field-row">
+          <view class="field field-half">
+            <view class="field-label">交通方式</view>
+            <picker
+              mode="selector"
+              range="{{transportationOptions}}"
+              value="{{transportationIndex}}"
+              bindchange="onTransportationChange"
+            >
+              <view class="picker-value">{{transportationOptions[transportationIndex]}}</view>
+            </picker>
+          </view>
+
+          <view class="field field-half">
+            <view class="field-label">住宿偏好</view>
+            <picker
+              mode="selector"
+              range="{{accommodationOptions}}"
+              value="{{accommodationIndex}}"
+              bindchange="onAccommodationChange"
+            >
+              <view class="picker-value">{{accommodationOptions[accommodationIndex]}}</view>
+            </picker>
+          </view>
+        </view>
+
+        <view class="field">
+          <view class="field-label">旅行偏好（可多选）</view>
+          <view class="tag-list">
+            <view
+              class="tag-item {{item.checked ? 'tag-item-active' : ''}}"
+              wx:for="{{preferenceList}}"
+              wx:key="label"
+              data-index="{{index}}"
+              bindtap="onTogglePreference"
+            >{{item.label}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 额外要求 -->
+      <view class="card">
+        <view class="section-title">额外要求</view>
+        <textarea
+          class="field-textarea"
+          value="{{freeText}}"
+          placeholder="例如：想去看升旗、需要无障碍设施、对海鲜过敏…"
+          placeholder-class="ph"
+          maxlength="200"
+          show-confirm-bar="{{false}}"
+          bindinput="onFreeTextInput"
+        />
+        <view class="field-hint">最多 200 字，可留空</view>
+      </view>
+
+      <button class="btn-primary submit" bindtap="onSubmit" disabled="{{loading}}">开始规划我的旅行</button>
+      <view class="foot-tip">单次生成约需 20 - 30 秒（随天数波动），期间请保持页面在前台</view>
+
+    </view>
+  </block>
+
+  <!-- 生成中：整页替换，避免原生组件（textarea）盖住浮层 -->
+  <view class="progress-page" wx:else>
+    <view class="progress-box">
+      <view class="progress-title">正在生成行程</view>
+      <view class="progress-target" wx:if="{{city}}">{{city}} · {{travelDaysText}}</view>
+
+      <view class="progress-bar">
+        <view class="progress-inner" style="width: {{progress}}%"></view>
+      </view>
+      <view class="progress-text">{{progressText}}</view>
+
+      <view class="progress-hint">景点搜索 / 天气查询 / 酒店推荐 并行完成 → 行程编排</view>
+    </view>
+  </view>
+
+</view>

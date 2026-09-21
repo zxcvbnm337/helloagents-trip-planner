@@ -1,0 +1,7 @@
+# 云函数根目录（对应 project.config.json 的 "cloudfunctionRoot": "cloudfunctions/"）
+#
+# 本目录下每个子文件夹 = 一个云函数，各自需要 index.js + package.json。
+# 当前项目尚未使用云函数，此文件仅用于保留空目录。
+#
+# 如需把小程序的请求转成云函数调用（可绕开 request 合法域名限制），
+# 在此新建一个函数目录即可，例如 cloudfunctions/tripProxy/。

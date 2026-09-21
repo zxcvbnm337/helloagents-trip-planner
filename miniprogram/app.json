@@ -1,0 +1,22 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/result/result"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "backgroundColor": "#F2F4F8",
+    "navigationBarBackgroundColor": "#5B54D6",
+    "navigationBarTitleText": "智能旅行助手",
+    "navigationBarTextStyle": "white"
+  },
+  "style": "v2",
+  "networkTimeout": {
+    "request": 120000,
+    "connectSocket": 60000,
+    "uploadFile": 60000,
+    "downloadFile": 60000
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

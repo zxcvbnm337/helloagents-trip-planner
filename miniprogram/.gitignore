@@ -1,0 +1,11 @@
+# 微信开发者工具生成的「个人本地配置」：含本机绝对路径与个人编译设置，
+# 换人/换机器就不一样，不应提交到仓库。
+project.private.config.json
+
+# 依赖与 npm 构建产物
+node_modules/
+miniprogram_npm/
+
+# 本地环境配置
+.env
+.env.local

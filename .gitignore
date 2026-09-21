@@ -1,0 +1,58 @@
+# ============================================================
+# 项目根级 .gitignore —— 兜底防线
+#
+# 背景：backend/ 与 frontend/ 各自已有 .gitignore，但都是「子目录级」的，
+# 只对自身目录生效。本项目曾经出现过「.env.example 里被填进真实密钥」的情况，
+# 所以这里再做一层统一兜底：无论从哪个子目录新增密钥文件，都不会被提交。
+#
+# 规则要点：
+#   - `.env` 这类不带斜杠的写法会匹配任意层级的同名文件；
+#   - 末尾的 ! 否定规则必须写在忽略规则之后，否则不生效。
+# ============================================================
+
+# ---------- 环境变量 / 密钥 ----------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
+*.key
+!.env.example
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---------- Node ----------
+node_modules/
+miniprogram_npm/
+dist/
+dist-ssr/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- 微信开发者工具 ----------
+# 个人本地配置（含本机绝对路径与个人编译设置），换机器就不同
+project.private.config.json
+
+# ---------- IDE / 编辑器 ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini

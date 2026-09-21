@@ -1,0 +1,263 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+/* ---------- 顶部 ---------- */
+.hero {
+  padding: 56rpx 40rpx 64rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.hero-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 2rpx;
+}
+
+.hero-subtitle {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* ---------- 上次行程 ---------- */
+.history-bar {
+  display: flex;
+  align-items: center;
+  margin: -36rpx 24rpx 0;
+  padding: 28rpx 32rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 12rpx 32rpx rgba(31, 36, 48, 0.1);
+}
+
+.history-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-label {
+  font-size: 24rpx;
+  color: #8b93a5;
+}
+
+.history-value {
+  margin-top: 6rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.history-arrow {
+  flex: none;
+  margin-left: 20rpx;
+  padding: 10rpx 26rpx;
+  border-radius: 28rpx;
+  font-size: 24rpx;
+  color: #5b54d6;
+  background: #f0f1fe;
+}
+
+/* 来源标记：说明这份行程是否已上云 */
+.history-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  color: #0f7a5a;
+  background: #e6f5ef;
+}
+
+.history-clear {
+  flex: none;
+  margin-left: 16rpx;
+  padding: 10rpx 22rpx;
+  border-radius: 28rpx;
+  font-size: 24rpx;
+  color: #8b93a5;
+  background: #f4f5f8;
+}
+
+/* ---------- 表单 ---------- */
+.field {
+  margin-bottom: 8rpx;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.field-half {
+  width: 48%;
+}
+
+.field-label {
+  margin-bottom: 14rpx;
+  font-size: 26rpx;
+  color: #5a6273;
+}
+
+.field-input,
+.picker-value {
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid #e9ecf2;
+  border-radius: 16rpx;
+  background: #fafbfd;
+  font-size: 30rpx;
+  color: #1f2430;
+}
+
+.picker-placeholder {
+  color: #b6bccb;
+}
+
+.field-input:focus,
+.picker-value:active {
+  border-color: #b9bcf5;
+}
+
+.field-textarea {
+  width: 100%;
+  height: 180rpx;
+  padding: 20rpx 24rpx;
+  border: 2rpx solid #e9ecf2;
+  border-radius: 16rpx;
+  background: #fafbfd;
+  font-size: 30rpx;
+  line-height: 1.6;
+  color: #1f2430;
+}
+
+.ph {
+  color: #b6bccb;
+  font-size: 28rpx;
+}
+
+.field-hint {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 天数 ---------- */
+.days-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding: 20rpx 28rpx;
+  border-radius: 16rpx;
+  background: #f0f1fe;
+}
+
+.days-bar-label {
+  font-size: 26rpx;
+  color: #5a6273;
+}
+
+.days-bar-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #5b54d6;
+}
+
+/* ---------- 偏好标签 ---------- */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 4rpx;
+}
+
+.tag-item {
+  padding: 14rpx 32rpx;
+  margin: 0 16rpx 16rpx 0;
+  border: 2rpx solid #e9ecf2;
+  border-radius: 32rpx;
+  background: #ffffff;
+  font-size: 26rpx;
+  color: #5a6273;
+}
+
+.tag-item-active {
+  border-color: transparent;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ---------- 提交 ---------- */
+.submit {
+  margin-top: 16rpx;
+}
+
+.foot-tip {
+  margin-top: 20rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 生成中 ---------- */
+.progress-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0 56rpx;
+}
+
+.progress-box {
+  width: 100%;
+  padding: 64rpx 48rpx;
+  background: #ffffff;
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 48rpx rgba(31, 36, 48, 0.08);
+  text-align: center;
+}
+
+.progress-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.progress-target {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #8b93a5;
+}
+
+.progress-bar {
+  position: relative;
+  height: 16rpx;
+  margin: 48rpx 0 28rpx;
+  border-radius: 8rpx;
+  background: #eef0f6;
+  overflow: hidden;
+}
+
+.progress-inner {
+  height: 100%;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.4s ease;
+}
+
+.progress-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #5b54d6;
+}
+
+.progress-hint {
+  margin-top: 40rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #9aa1b1;
+}

@@ -1,0 +1,10 @@
+{
+  "name": "proxyTrip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "把小程序请求中转给自建 FastAPI 后端，绕开 request 合法域名（https）限制",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}

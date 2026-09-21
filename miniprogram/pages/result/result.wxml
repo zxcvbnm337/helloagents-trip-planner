@@ -1,0 +1,167 @@
+<!-- 无数据兜底 -->
+<view class="empty" wx:if="{{!plan}}">
+  <view class="empty-text">还没有可展示的行程</view>
+  <button class="btn-primary empty-btn" bindtap="onRegenerate">去生成一份</button>
+</view>
+
+<block wx:else>
+  <view class="page">
+
+    <!-- 概览 -->
+    <view class="hero">
+      <view class="hero-city">{{plan.city}}</view>
+      <view class="hero-date">{{plan.dateRangeText}}</view>
+      <view class="hero-meta">
+        <text>{{plan.travelDays}} 天</text>
+        <text class="dot">·</text>
+        <text>{{plan.attractionCount}} 个景点</text>
+      </view>
+      <view class="hero-budget" wx:if="{{plan.budget}}">
+        <text class="hero-budget-label">预估总花费</text>
+        <text class="hero-budget-value">{{plan.budget.totalText}}</text>
+      </view>
+    </view>
+
+    <view class="container">
+
+      <!-- 天气 -->
+      <view class="card" wx:if="{{plan.hasWeather}}">
+        <view class="section-title">行程期间天气</view>
+        <scroll-view class="h-scroll" scroll-x>
+          <view class="weather-chip" wx:for="{{plan.weatherList}}" wx:key="date">
+            <view class="wc-date">{{item.dateLabel}}</view>
+            <view class="wc-weather">{{item.dayWeather}}</view>
+            <view class="wc-temp">{{item.dayTempText}} / {{item.nightTempText}}</view>
+            <view class="wc-wind" wx:if="{{item.windText}}">{{item.windText}}</view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 地图 -->
+      <view class="card" wx:if="{{plan.days.length}}">
+        <view class="section-title">行程地图</view>
+
+        <scroll-view class="h-scroll day-scroll" scroll-x>
+          <view
+            class="day-chip {{dayOrder === activeDayIndex ? 'day-chip-active' : ''}}"
+            wx:for="{{plan.days}}"
+            wx:key="key"
+            wx:for-index="dayOrder"
+            data-index="{{dayOrder}}"
+            bindtap="onSelectDay"
+          >第 {{item.dayNumber}} 天</view>
+        </scroll-view>
+
+        <view class="map-day-label">{{activeDayLabel}}</view>
+
+        <map
+          wx:if="{{mapReady}}"
+          class="trip-map"
+          id="tripMap"
+          latitude="{{mapLat}}"
+          longitude="{{mapLng}}"
+          scale="{{mapScale}}"
+          markers="{{markers}}"
+          polyline="{{polyline}}"
+          include-points="{{includePoints}}"
+          show-location="{{false}}"
+        ></map>
+        <view class="map-empty" wx:else>{{mapHint}}</view>
+
+        <view class="map-hint" wx:if="{{mapReady}}">{{mapHint}}</view>
+      </view>
+
+      <!-- 每日行程 -->
+      <view class="card" wx:for="{{plan.days}}" wx:key="key" wx:for-item="day">
+        <view class="day-head">
+          <view class="day-badge">第 {{day.dayNumber}} 天</view>
+          <view class="day-date">{{day.dateLabel}}</view>
+        </view>
+
+        <view class="day-desc" wx:if="{{day.description}}">{{day.description}}</view>
+
+        <view class="day-tags">
+          <text class="tag">交通 {{day.transportation}}</text>
+          <text class="tag">住宿 {{day.accommodation}}</text>
+        </view>
+
+        <view class="day-weather" wx:if="{{day.weather}}">
+          {{day.weather.dayWeather}} {{day.weather.dayTempText}}，夜间 {{day.weather.nightWeather}} {{day.weather.nightTempText}}
+        </view>
+
+        <block wx:if="{{day.hasAttractions}}">
+          <view class="sub-title">景点安排</view>
+          <view
+            class="spot"
+            wx:for="{{day.attractions}}"
+            wx:key="key"
+            wx:for-item="spot"
+            wx:for-index="spotOrder"
+          >
+            <view class="spot-order">{{spotOrder + 1}}</view>
+            <view class="spot-body">
+              <view class="spot-name">{{spot.name}}</view>
+              <view class="spot-desc" wx:if="{{spot.description}}">{{spot.description}}</view>
+              <view class="spot-meta">
+                <text>{{spot.category}}</text>
+                <text class="dot">·</text>
+                <text wx:if="{{spot.durationText}}">游览 {{spot.durationText}}</text>
+                <text class="dot" wx:if="{{spot.durationText}}">·</text>
+                <text>{{spot.ticketText}}</text>
+              </view>
+              <view class="spot-addr" wx:if="{{spot.address}}">{{spot.address}}</view>
+            </view>
+          </view>
+        </block>
+
+        <block wx:if="{{day.hotel}}">
+          <view class="sub-title">推荐住宿</view>
+          <view class="hotel">
+            <view class="hotel-name">{{day.hotel.name}}</view>
+            <view class="hotel-meta" wx:if="{{day.hotel.metaText}}">{{day.hotel.metaText}}</view>
+            <view class="hotel-cost" wx:if="{{day.hotel.costText}}">{{day.hotel.costText}}</view>
+          </view>
+        </block>
+
+        <block wx:if="{{day.meals.length}}">
+          <view class="sub-title">餐饮安排</view>
+          <view class="meal" wx:for="{{day.meals}}" wx:key="key" wx:for-item="meal">
+            <view class="meal-label">{{meal.label}}</view>
+            <view class="meal-body">
+              <view class="meal-name">{{meal.name}}</view>
+              <view class="meal-desc" wx:if="{{meal.description}}">{{meal.description}}</view>
+            </view>
+            <view class="meal-cost" wx:if="{{meal.costText}}">{{meal.costText}}</view>
+          </view>
+        </block>
+      </view>
+
+      <!-- 预算 -->
+      <view class="card" wx:if="{{plan.budget}}">
+        <view class="section-title">预算明细</view>
+        <view class="budget-row" wx:for="{{plan.budget.items}}" wx:key="label">
+          <text class="budget-label">{{item.label}}</text>
+          <text class="budget-value">{{item.valueText}}</text>
+        </view>
+        <view class="budget-total">
+          <text>合计</text>
+          <text class="budget-total-value">{{plan.budget.totalText}}</text>
+        </view>
+      </view>
+
+      <!-- 总体建议 -->
+      <view class="card" wx:if="{{plan.overallSuggestions}}">
+        <view class="section-title">总体建议</view>
+        <view class="suggestion">{{plan.overallSuggestions}}</view>
+      </view>
+
+      <!-- 操作 -->
+      <view class="footer-actions">
+        <button class="btn-ghost action" bindtap="onCopy">复制行程</button>
+        <button class="btn-primary action" bindtap="onRegenerate">重新规划</button>
+      </view>
+      <view class="foot-tip">行程保存在本机，仅当前设备可见</view>
+
+    </view>
+  </view>
+</block>

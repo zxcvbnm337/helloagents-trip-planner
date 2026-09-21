@@ -1,0 +1,404 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+/* ---------- 概览 ---------- */
+.hero {
+  padding: 48rpx 40rpx 56rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.hero-city {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 2rpx;
+}
+
+.hero-date {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-meta {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-meta .dot {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hero-budget {
+  display: flex;
+  align-items: baseline;
+  margin-top: 32rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.hero-budget-label {
+  flex: 1;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-budget-value {
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* ---------- 横向滚动 ----------
+ * 注意：不要在 scroll-view 自身上写 display:flex。
+ * scroll-view + scroll-x 若不指定高度，display:flex 会让容器高度无法收敛，
+ * 叠加 align-items:stretch 默认值后子项被拉伸到上千像素（曾导致页面高达 9961px）。
+ * 这里用经典方案：容器 white-space:nowrap + 子项 display:inline-block，
+ * 再用 font-size:0 消除行内元素之间的空白间隙。
+ */
+.h-scroll {
+  width: 100%;
+  white-space: nowrap;
+  font-size: 0;
+}
+
+/* ---------- 天气 ---------- */
+.weather-chip {
+  display: inline-block;
+  vertical-align: top;
+  width: 180rpx;
+  margin-right: 20rpx;
+  padding: 24rpx 16rpx;
+  border-radius: 20rpx;
+  background: #f6f7fd;
+  text-align: center;
+  white-space: normal;
+}
+
+.weather-chip:last-child {
+  margin-right: 0;
+}
+
+.wc-date {
+  font-size: 24rpx;
+  color: #8b93a5;
+}
+
+.wc-weather {
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.wc-temp {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #5b54d6;
+}
+
+.wc-wind {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 地图 ---------- */
+.day-scroll {
+  margin-bottom: 20rpx;
+}
+
+.day-chip {
+  display: inline-block;
+  vertical-align: top;
+  padding: 14rpx 32rpx;
+  margin-right: 16rpx;
+  border-radius: 32rpx;
+  background: #f2f3f9;
+  font-size: 26rpx;
+  color: #5a6273;
+  white-space: nowrap;
+}
+
+.day-chip:last-child {
+  margin-right: 0;
+}
+
+.day-chip-active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.map-day-label {
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.trip-map {
+  width: 100%;
+  height: 480rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.map-empty {
+  padding: 80rpx 32rpx;
+  border-radius: 20rpx;
+  background: #f6f7fd;
+  text-align: center;
+  font-size: 26rpx;
+  color: #9aa1b1;
+}
+
+.map-hint {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 每日行程 ---------- */
+.day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.day-badge {
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.day-date {
+  font-size: 26rpx;
+  color: #8b93a5;
+}
+
+.day-desc {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #3b4252;
+}
+
+.day-tags {
+  margin-top: 20rpx;
+}
+
+.day-weather {
+  margin-top: 8rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f6f7fd;
+  font-size: 24rpx;
+  color: #5a6273;
+}
+
+/* ---------- 景点 ---------- */
+.spot {
+  display: flex;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid #f2f3f9;
+}
+
+.spot:last-child {
+  border-bottom: none;
+}
+
+.spot-order {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: #f0f1fe;
+  color: #5b54d6;
+  font-size: 24rpx;
+  font-weight: 600;
+  text-align: center;
+  line-height: 44rpx;
+}
+
+.spot-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.spot-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.spot-desc {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: 1.65;
+  color: #5a6273;
+}
+
+.spot-meta {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8b93a5;
+}
+
+.spot-addr {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 酒店 ---------- */
+.hotel {
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background: #f6f7fd;
+}
+
+.hotel-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2430;
+}
+
+.hotel-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8b93a5;
+}
+
+.hotel-cost {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #5b54d6;
+}
+
+/* ---------- 餐饮 ---------- */
+.meal {
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid #f2f3f9;
+}
+
+.meal:last-child {
+  border-bottom: none;
+}
+
+.meal-label {
+  flex: none;
+  width: 88rpx;
+  margin-right: 20rpx;
+  padding: 6rpx 0;
+  border-radius: 12rpx;
+  background: #f0f1fe;
+  color: #5b54d6;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+.meal-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1f2430;
+}
+
+.meal-desc {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #8b93a5;
+}
+
+.meal-cost {
+  flex: none;
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  color: #5b54d6;
+}
+
+/* ---------- 预算 ---------- */
+.budget-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  font-size: 28rpx;
+  color: #5a6273;
+}
+
+.budget-value {
+  color: #1f2430;
+}
+
+.budget-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 16rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx dashed #e9ecf2;
+  font-size: 28rpx;
+  color: #5a6273;
+}
+
+.budget-total-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #5b54d6;
+}
+
+/* ---------- 建议 ---------- */
+.suggestion {
+  font-size: 28rpx;
+  line-height: 1.75;
+  color: #3b4252;
+}
+
+/* ---------- 操作 ---------- */
+.footer-actions {
+  display: flex;
+  margin-top: 16rpx;
+}
+
+.action {
+  flex: 1;
+  margin: 0;
+}
+
+.action:first-child {
+  margin-right: 20rpx;
+}
+
+.foot-tip {
+  margin-top: 20rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #9aa1b1;
+}
+
+/* ---------- 空状态 ---------- */
+.empty-text {
+  margin-bottom: 32rpx;
+}
+
+.empty-btn {
+  width: 400rpx;
+  margin: 0 auto;
+}
