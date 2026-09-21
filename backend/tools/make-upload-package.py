@@ -40,7 +40,14 @@ SKIP_SUFFIXES = (".pyc", ".pyo")
 SIZE_LIMIT = 2 * 1024 * 1024
 
 # 绝不能出现在包里的东西 —— 出现就直接失败，而不是打个警告了事
-FORBIDDEN = {".env", ".env.local", ".env.production", "id_rsa"}
+FORBIDDEN = {
+    ".env",
+    ".env.local",
+    ".env.production",
+    "id_rsa",
+    # 有人会把云托管的环境变量 JSON 填成真实密钥后落到这里
+    "env.cloudrun.json",
+}
 
 
 def repo_root() -> str:
