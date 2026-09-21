@@ -1,25 +1,61 @@
 """数据模型定义"""
 
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from datetime import date
+
+
+MAX_TRAVEL_DAYS = 30
 
 
 # ============ 请求模型 ============
 
 class TripRequest(BaseModel):
     """旅行规划请求"""
-    city: str = Field(..., description="目的地城市", example="北京")
-    start_date: str = Field(..., description="开始日期 YYYY-MM-DD", example="2025-06-01")
-    end_date: str = Field(..., description="结束日期 YYYY-MM-DD", example="2025-06-03")
-    travel_days: int = Field(..., description="旅行天数", ge=1, le=30, example=3)
-    transportation: str = Field(..., description="交通方式", example="公共交通")
-    accommodation: str = Field(..., description="住宿偏好", example="经济型酒店")
-    preferences: List[str] = Field(default=[], description="旅行偏好标签", example=["历史文化", "美食"])
-    free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
-    
-    class Config:
-        json_schema_extra = {
+    city: str = Field(..., description="目的地城市", json_schema_extra={"example": "北京"})
+    start_date: str = Field(..., description="开始日期 YYYY-MM-DD", json_schema_extra={"example": "2025-06-01"})
+    end_date: str = Field(..., description="结束日期 YYYY-MM-DD", json_schema_extra={"example": "2025-06-03"})
+    travel_days: Optional[int] = Field(
+        default=None,
+        description="旅行天数；**服务端会按日期区间重算并以此为准**，客户端可不传",
+        ge=1, le=MAX_TRAVEL_DAYS, json_schema_extra={"example": 3})
+    transportation: str = Field(..., description="交通方式", json_schema_extra={"example": "公共交通"})
+    accommodation: str = Field(..., description="住宿偏好", json_schema_extra={"example": "经济型酒店"})
+    preferences: List[str] = Field(default=[], description="旅行偏好标签", json_schema_extra={"example": ["历史文化", "美食"]})
+    free_text_input: Optional[str] = Field(default="", description="额外要求", json_schema_extra={"example": "希望多安排一些博物馆"})
+
+    @model_validator(mode="after")
+    def _derive_travel_days(self):
+        """以日期区间为唯一真相推导 travel_days。
+
+        为什么要在这里兜：Web 版与小程序版各自用「结束 - 开始 + 1」算出天数再传给
+        后端，后端又独立接收一份 —— 同一个事实有两处真相，一旦两边差一天，模型
+        就会按错的天数生成行程，而用户看到的是自己选的日期。收敛为「服务端按日期
+        重算」后，客户端传什么都不影响结果；若传了且不一致只打日志，方便发现客
+        户端 bug 而不影响线上可用性。
+        """
+        try:
+            start = date.fromisoformat(self.start_date)
+            end = date.fromisoformat(self.end_date)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(f"日期格式需为 YYYY-MM-DD：{exc}")
+
+        days = (end - start).days + 1
+        if days < 1:
+            raise ValueError("结束日期不能早于开始日期")
+        if days > MAX_TRAVEL_DAYS:
+            raise ValueError(f"旅行天数不能超过 {MAX_TRAVEL_DAYS} 天（当前 {days} 天）")
+
+        if self.travel_days is not None and self.travel_days != days:
+            print(
+                f"⚠️  客户端传的 travel_days={self.travel_days} 与日期区间不一致"
+                f"（{self.start_date}~{self.end_date} 应为 {days} 天），已按日期重算"
+            )
+        self.travel_days = days
+        return self
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "city": "北京",
                 "start_date": "2025-06-01",
@@ -31,19 +67,20 @@ class TripRequest(BaseModel):
                 "free_text_input": "希望多安排一些博物馆"
             }
         }
+    )
 
 
 class POISearchRequest(BaseModel):
     """POI搜索请求"""
-    keywords: str = Field(..., description="搜索关键词", example="故宫")
-    city: str = Field(..., description="城市", example="北京")
+    keywords: str = Field(..., description="搜索关键词", json_schema_extra={"example": "故宫"})
+    city: str = Field(..., description="城市", json_schema_extra={"example": "北京"})
     citylimit: bool = Field(default=True, description="是否限制在城市范围内")
 
 
 class RouteRequest(BaseModel):
     """路线规划请求"""
-    origin_address: str = Field(..., description="起点地址", example="北京市朝阳区阜通东大街6号")
-    destination_address: str = Field(..., description="终点地址", example="北京市海淀区上地十街10号")
+    origin_address: str = Field(..., description="起点地址", json_schema_extra={"example": "北京市朝阳区阜通东大街6号"})
+    destination_address: str = Field(..., description="终点地址", json_schema_extra={"example": "北京市海淀区上地十街10号"})
     origin_city: Optional[str] = Field(default=None, description="起点城市")
     destination_city: Optional[str] = Field(default=None, description="终点城市")
     route_type: str = Field(default="walking", description="路线类型: walking/driving/transit")

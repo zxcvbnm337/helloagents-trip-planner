@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from typing import List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -68,10 +68,11 @@ class Settings(BaseSettings):
     # 生产环境建议关闭 /docs 与 /redoc，减少信息暴露
     enable_docs: bool = True
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        extra = "ignore"  # 忽略额外的环境变量
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",  # 忽略额外的环境变量
+    )
 
     def get_cors_origins_list(self) -> List[str]:
         """获取CORS origins列表"""
