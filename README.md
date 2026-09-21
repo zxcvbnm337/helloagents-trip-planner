@@ -85,7 +85,7 @@
 | 能力 | Web 版（`frontend/`） | 小程序版（`miniprogram/`） |
 | --- | --- | --- |
 | 地图 | 高德 JS API（需 Web 端 Key） | 内置 `<map>` 组件（**免 Key**） |
-| 主要约束 | 浏览器 CORS | request 合法域名白名单 |
+| 主要约束 | 浏览器 CORS | request 合法域名白名单（可用云托管通道规避） |
 | 结果传递 | `sessionStorage` | `wx.setStorageSync` + 云数据库 |
 | 导出 | html2canvas + jsPDF → 图片 / PDF | 复制纯文本 + 转发分享（**小程序无 DOM**） |
 | 跨设备 | 不支持 | 支持（云数据库） |
@@ -114,13 +114,17 @@
 
 `miniprogram/config/index.js` 的 `TRANSPORT`：
 
-| 取值 | 通道 | 用途 |
-| --- | --- | --- |
-| `direct` | `wx.request` | 本地开发（默认） |
-| `cloud-function` | `wx.cloud.callFunction` | 绕开 request 合法域名白名单 |
-| `cloud-container` | `wx.cloud.callContainer` | 后端部署在云托管，无云函数 60s 超时天花板 |
+| 取值 | 通道 | 用途 | 真机 / 体验版 |
+| --- | --- | --- | --- |
+| `direct` | `wx.request` | 本地开发（默认） | ❌ 必须是备案 https 域名并登记白名单 |
+| `cloud-function` | `wx.cloud.callFunction` | 绕开 request 合法域名白名单 | ⚠️ 后端仍需公网可达，且超时上限仅 60s |
+| `cloud-container` | `wx.cloud.callContainer` | 后端部署在微信云托管 | ✅ **免备案域名**，走微信内网 |
 
-三通道的返回值契约完全一致，统一收拢在 `utils/request.js`，**上层页面无感知**。
+三通道的返回值契约完全一致，统一收拢在 `utils/request.js`，**上层页面无感知** ——
+切通道只改一个字符串，页面代码一行不动。
+
+`cloud-container` 是让体验版在手机上真正跑通的路径，完整步骤见
+**[`backend/DEPLOY-CLOUDRUN.md`](backend/DEPLOY-CLOUDRUN.md)**。
 
 ### 4. 云数据库：优雅降级优先于功能
 
@@ -183,6 +187,29 @@
 
 文案的唯一来源是 `miniprogram/config/index.js` 的 `AI_LABEL`，不在页面里硬编码。
 
+### 9. 云托管与云开发是两个环境，别混用
+
+要让真机跑通后端就得用云托管；而「行程跨设备可见」用的是云数据库，那属于云开发。
+直觉上会以为两者共享同一个环境 ID —— **不是**。微信官方 FAQ 的原文：
+
+> 微信云托管和微信云开发是两套独立体系，微信云托管的环境只能在微信云托管控制台看到，
+> 在微信开发者工具的云开发控制台中不能看到。
+
+所以小程序端维护**两个**环境 ID，分别来自两个控制台：
+
+| 常量 | 属于 | 形如 | 谁在用 |
+| --- | --- | --- | --- |
+| `CLOUD_ENV` | 微信云开发 | `cloud1-xxxxxxxx` | `wx.cloud.init` / 云数据库 |
+| `CLOUD_CONTAINER_ENV` | **微信云托管** | `prod-xxxxxxxx` | `callContainer({ config: { env } })` |
+
+混用的症状是 `-601002` / 环境不存在。这条是实际踩出来的：早期版本用一个常量喂两处，
+属于双份真相，现已拆开并加了回归用例钉住
+（`miniprogram/tools/test-error-translate.js` 的「callContainer 的环境 ID」一组）。
+
+> 用云托管通道时还有一个隐蔽点：`callContainer` 的参数与 `wx.request` 一致，
+> **不传 `timeout` 就吃 60 秒默认值**。本链路实测 17~25 秒，再叠上缩容到 0 的冷启动，
+> 60 秒会不够 —— 所以云托管通道显式透传了 `REQUEST_TIMEOUT`。
+
 ---
 
 ## 五、快速开始
@@ -229,6 +256,17 @@ docker run --rm -p 8000:8000 --env-file backend/.env -e PORT=8000 trip-api
   其白名单在 Linux 下包含 `PATH` 与 `HOME`，因此容器内能找到 `uvx` 并定位到 uv 的工具目录。）
 
 生产环境建议同时设 `AUTH_MODE` 与 `ENABLE_DOCS=false`。
+
+### 部署到微信云托管（让真机 / 体验版跑通）
+
+`direct` 通道在真机上**不可能成立**：`localhost` 指的是手机自己，且 request 合法域名强制校验
+（必须是已备案的 https 域名）。本项目用 `cloud-container` 通道绕开整件事 ——
+请求走**微信内网**，不需要域名、不需要备案、不需要等审核，还可在控制台关掉公网访问天然防白嫖。
+
+完整 runbook 见 **[`backend/DEPLOY-CLOUDRUN.md`](backend/DEPLOY-CLOUDRUN.md)**，覆盖：
+
+开通云托管环境 → 本地先验证镜像 → 打包上传（≤ 2 MiB）→ 环境变量与 `AUTH_MODE=openid`
+→ 就绪探针指向 `/health` → 关闭公网访问 → 小程序侧改三处配置 → 真机复验 → **错误码排错表**。
 
 ### Web 版
 
@@ -294,6 +332,7 @@ helloagents-trip-planner/
 │   │   └── config.py                      # pydantic-settings 配置
 │   ├── tests/test_access_control.py       # 离线自测（38 项，无需 pytest / 网络 / 密钥）
 │   ├── Dockerfile                         # 多阶段构建 + 构建期预热 MCP
+│   ├── DEPLOY-CLOUDRUN.md                 # 云托管部署 runbook（真机 / 体验版）
 │   ├── .dockerignore                      # 确保 .env 不进镜像层
 │   ├── requirements.txt
 │   └── .env.example
@@ -303,7 +342,7 @@ helloagents-trip-planner/
 │       ├── views/Result.vue               # 行程 / 地图 / 预算
 │       └── services/api.ts
 ├── miniprogram/                    # 微信小程序（等价实现，复用后端）
-│   ├── config/index.js                    # TRANSPORT 开关、BASE_URL、云环境 ID、AI 标识文案
+│   ├── config/index.js                    # TRANSPORT 开关、BASE_URL、两个云环境 ID、AI 标识文案
 │   ├── utils/
 │   │   ├── request.js                     # 三通道 + 错误翻译
 │   │   ├── cloudStore.js                  # 云数据库双写与降级
@@ -333,6 +372,10 @@ helloagents-trip-planner/
 - **行程缺少归属校验**：按 ID 取行程时不校验调用者身份，尚未做「只能看自己的行程」的细粒度授权。
 - **`travel_days` 存在双份真相**：前端由日期差值算出、后端独立接收，需要收敛为单一来源。
 - **导出能力降级**：小程序侧未实现图片版行程（可用 canvas 2d 手绘，成本较高）。
+- **体验版只能给体验成员看**：个人主体约 15 个名额，二维码印在简历上面试官是扫不开的。
+  对外展示需改用仓库 `docs/` 里的截图 / 录屏，或走正式发布（需小程序审核）。
+- **`miniprogram/config/index.js` 默认仍是 `TRANSPORT = 'direct'`**：本地开发开箱即用，
+  但上传体验版前必须改成 `'cloud-container'` 并填入云托管环境 ID，否则真机仍会报合法域名错误。
 - **Pydantic v1 风格残留**：`Field(example=...)` 与 `class Config` 在 v2 下应改为
   `json_schema_extra` / `model_config`。
 
@@ -346,3 +389,4 @@ helloagents-trip-planner/
 - [HelloAgents 框架](https://github.com/jjyaoao/HelloAgents)
 - [高德地图开放平台](https://lbs.amap.com/) / [amap-mcp-server](https://github.com/sugarforever/amap-mcp-server)
 - [微信小程序云开发](https://developers.weixin.qq.com/miniprogram/dev/wxcloud/basis/getting-started.html)
+- [微信云托管](https://cloud.weixin.qq.com) — 小程序后端的容器化托管（免备案域名）

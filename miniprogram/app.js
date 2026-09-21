@@ -3,8 +3,10 @@ var config = require('./config/index')
 
 App({
   globalData: {
-    // 云开发环境 ID（微信云开发 / CloudBase）
-    // 取值来自 config/index.js 的 CLOUD_ENV —— 环境 ID 只维护一处，避免双份真相。
+    // 云开发环境 ID（微信云开发 / CloudBase）—— 云数据库走这个环境。
+    // 取值来自 config/index.js 的 CLOUD_ENV，环境 ID 只维护在 config 一处。
+    // ⚠️ 云托管（cloud-container）用的是**另一个**环境 ID，
+    //    即 config.CLOUD_CONTAINER_ENV —— 两者来自不同控制台，不要混用。
     env: config.CLOUD_ENV,
 
     // 上一次成功生成的行程（内存级缓存，页面卸载后仍在，重启小程序后失效）

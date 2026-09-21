@@ -30,6 +30,7 @@ var CONFIG_STUB = {
   TRANSPORT: 'direct',
   CLOUD_PROXY_NAME: 'proxyTrip',
   CLOUD_CONTAINER_SERVICE: 'trip-api',
+  CLOUD_CONTAINER_ENV: '',
   CLOUD_ENV: 'cloud1-test',
   USE_CLOUD_DB: true
 }
@@ -44,6 +45,7 @@ function loadHelpers(file) {
     ' describeError: typeof describeError === "function" ? describeError : null,' +
     ' describeCloudError: typeof describeCloudError === "function" ? describeCloudError : null,' +
     ' describeDbError: typeof describeDbError === "function" ? describeDbError : null,' +
+    ' resolveContainerEnv: typeof resolveContainerEnv === "function" ? resolveContainerEnv : null,' +
     ' shorten: typeof shorten === "function" ? shorten : null' +
     ' }\n'
 
@@ -113,6 +115,11 @@ function contains(s) {
 }
 function maxLen(n) {
   return function (v) { return String(v).length <= n ? '' : ('长度 ' + String(v).length + ' 超过上限 ' + n) }
+}
+function equals(expected) {
+  return function (v) {
+    return String(v) === String(expected) ? '' : ('应为 ' + JSON.stringify(expected) + '，实际 ' + JSON.stringify(v))
+  }
 }
 
 function main() {
@@ -185,6 +192,26 @@ function main() {
   check('describeCloudError(超时) → 原提示保留', req.describeCloudError({ errMsg: 'cloud.callFunction:fail timeout' }), [
     contains('3 秒')
   ])
+
+  /* ---- 云托管：callContainer 的 config.env 取自哪个环境 ID ---- */
+
+  tests.push('')
+  tests.push('── callContainer 的环境 ID ──')
+
+  // 背景：微信云托管与微信云开发是两套独立体系（官方 FAQ），环境 ID 来自不同控制台。
+  // 早期版本把云开发环境 ID 直接喂给 callContainer，属于双份真相 —— 这一组用例把它钉住。
+
+  CONFIG_STUB.CLOUD_CONTAINER_ENV = 'prod-abc123456'
+  check('resolveContainerEnv(已单独配置) → 用云托管环境 ID', req.resolveContainerEnv(), [
+    equals('prod-abc123456'),
+    notContains('cloud1-')
+  ])
+
+  CONFIG_STUB.CLOUD_CONTAINER_ENV = ''
+  check('resolveContainerEnv(未配置) → 回退云开发环境 ID', req.resolveContainerEnv(), [
+    equals('cloud1-test')
+  ])
+  CONFIG_STUB.CLOUD_CONTAINER_ENV = ''
 
   /* ================= cloudStore.js ================= */
 

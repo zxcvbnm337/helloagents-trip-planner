@@ -16,8 +16,14 @@
  *                      前提：后端必须公网可访问，且云函数超时已调到 60s。
  *                      详见 cloudfunctions/proxyTrip/index.js 顶部说明。
  *
- * 'cloud-container' —— 经微信云托管 callContainer 调用（后端部署在 CloudBase 云托管时）。
- *                      这是最省事的生产方案：callContainer 不走 request 合法域名校验。
+ * 'cloud-container' —— 经微信云托管 callContainer 调用，后端容器跑在微信云托管里。
+ *                      真机 / 体验版要跑通，这是最省事的一条路：
+ *                        · callContainer 走微信内网，**不需要在小程序后台配 request 合法域名**，
+ *                          也就**不需要备案域名**（这正是 `direct` 在真机上走不通的原因）；
+ *                        · 可以在云托管控制台**关掉公网访问**，只有本小程序能调，
+ *                          天然防白嫖，不必额外依赖 AUTH_MODE。
+ *                      需要额外填 CLOUD_CONTAINER_ENV 与 CLOUD_CONTAINER_SERVICE（见下）。
+ *                      部署步骤见 backend/DEPLOY-CLOUDRUN.md。
  */
 var TRANSPORT = 'direct'
 
@@ -44,12 +50,31 @@ var CLOUD_PROXY_NAME = 'proxyTrip'
  * 4. 云托管模式（cloud-container）
  * ============================================================ */
 
-// 云托管服务名，对应 callContainer 请求头 X-WX-SERVICE 的值
+// 云托管服务名，对应 callContainer 请求头 X-WX-SERVICE 的值。
+// 必须与「微信云托管控制台 → 服务管理 → 服务列表」里的服务名称完全一致。
 var CLOUD_CONTAINER_SERVICE = 'trip-api'
 
-// 云开发环境 ID（微信云开发 / CloudBase）
-// 这里是小程序端唯一的环境 ID 来源，app.js 的 globalData.env 由它派生。
+/* ⚠️ 下面两个环境 ID 不是同一个东西，别混用。
+ *
+ * 微信官方 FAQ 写得很明确：「微信云托管和微信云开发是两套独立体系，
+ * 微信云托管的环境只能在微信云托管控制台看到，在微信开发者工具的
+ * 云开发控制台中不能看到。」
+ *
+ *   CLOUD_ENV           = 微信云开发环境 ID（形如 cloud1-xxxxxxxx）
+ *                         → 给 wx.cloud.init / wx.cloud.database() 用，即云数据库。
+ *
+ *   CLOUD_CONTAINER_ENV = 微信云托管环境 ID（形如 prod-xxxxxxxx）
+ *                         → 给 wx.cloud.callContainer 的 config.env 用。
+ *                         ⚠️ 该参数必填且不能为空。
+ *
+ * 之所以拆成两个常量：本项目同时用了云数据库（云开发）与云托管（后端容器），
+ * 它们各自的环境 ID 来自不同控制台。早期版本用一个常量喂两处，属于双份真相，
+ * 一旦两个环境不同就会报 -601002 / 环境不存在。
+ *
+ * 留空则回退使用 CLOUD_ENV —— 仅当你确认两者恰好在同一个环境时才这样用。
+ */
 var CLOUD_ENV = 'cloud1-d5gan8twf7e51b2cf'
+var CLOUD_CONTAINER_ENV = ''
 
 /* ============================================================
  * 5. 云数据库（行程跨设备可见）
@@ -101,6 +126,7 @@ module.exports = {
   CLOUD_PROXY_NAME: CLOUD_PROXY_NAME,
 
   CLOUD_CONTAINER_SERVICE: CLOUD_CONTAINER_SERVICE,
+  CLOUD_CONTAINER_ENV: CLOUD_CONTAINER_ENV,
   CLOUD_ENV: CLOUD_ENV,
 
   USE_CLOUD_DB: USE_CLOUD_DB,

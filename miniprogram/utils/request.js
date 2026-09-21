@@ -86,7 +86,9 @@ function describeError(err) {
   var text = String(raw)
 
   if (text.indexOf('domain list') > -1 || text.indexOf('合法域名') > -1) {
-    return '请求域名未在合法域名列表中：开发者工具可在「详情 → 本地设置」勾选“不校验合法域名”；真机需把 config/index.js 里的 BASE_URL 换成已备案的 https 域名，并在小程序后台登记 request 合法域名；也可把 TRANSPORT 改成 cloud-function 走云函数中转'
+    return '请求域名未在合法域名列表中：开发者工具可在「详情 → 本地设置」勾选“不校验合法域名”；' +
+      '真机需把 BASE_URL 换成已备案的 https 域名并在小程序后台登记 request 合法域名，' +
+      '或把 TRANSPORT 改成 cloud-container（云托管，免备案域名，推荐）/ cloud-function（云函数中转）'
   }
   if (text.indexOf('timeout') > -1 || text.indexOf('超时') > -1) {
     return '生成超时：多智能体规划耗时较长，请重试，或减少旅行天数后再次生成'
@@ -209,20 +211,35 @@ function viaCloudFunction(url, method, data) {
  * 通道 3：云托管
  * ------------------------------------------------------------------ */
 
-function viaCloudContainer(url, method, data) {
+/**
+ * 解析 callContainer 要用的环境 ID。
+ *
+ * config.env 是必填项，不能留空，所以这里必须有兜底。
+ * 但兜底只能是「回退到云开发环境 ID」这种尽力而为 —— 微信云托管与微信云开发
+ * 是两套独立体系（见 config/index.js 的注释），两者 ID 通常并不相同。
+ * 回退时打一条 warn，避免用户对着 -601002 猜半天。
+ */
+function resolveContainerEnv() {
+  if (config.CLOUD_CONTAINER_ENV) {
+    return config.CLOUD_CONTAINER_ENV
+  }
+  console.warn('[request][cloud-container] 未配置 CLOUD_CONTAINER_ENV，' +
+    '回退使用云开发环境 ID「' + config.CLOUD_ENV + '」。' +
+    '若云托管服务不在该环境，请到微信云托管控制台复制环境 ID 填入 config/index.js')
+  return config.CLOUD_ENV
+}
+
+function viaCloudContainer(url, method, data, timeout) {
   return new Promise(function (resolve, reject) {
     if (!wx.cloud || !wx.cloud.callContainer) {
       reject(new Error('当前基础库不支持云托管调用（需 2.20.0+），请升级基础库，或改用 TRANSPORT = \'cloud-function\' / \'direct\''))
       return
     }
 
-    var callConfig = {}
-    if (config.CLOUD_ENV) {
-      callConfig.env = config.CLOUD_ENV
-    }
-
     wx.cloud.callContainer({
-      config: callConfig,
+      config: {
+        env: resolveContainerEnv()
+      },
       path: url,
       method: method,
       header: {
@@ -230,6 +247,10 @@ function viaCloudContainer(url, method, data) {
         'content-type': 'application/json'
       },
       data: data,
+      // 显式带上超时预算。callContainer 的参数与 wx.request 一致，
+      // 不传就吃 wx.request 的默认值（60s）——而本链路实测 17~25s，
+      // 再叠上云托管「缩容到 0」的冷启动（容器要从零拉起），60s 会不够。
+      timeout: timeout,
       success: function (res) {
         var status = res.statusCode
         if (status >= 200 && status < 300) {
@@ -242,7 +263,8 @@ function viaCloudContainer(url, method, data) {
         var raw = (err && err.errMsg) || ''
         console.error('[request][cloud-container] 调用失败 | errMsg: ' + (raw || '(无)'))
         reject(new Error('云托管调用失败：' + summarizeRaw(raw) +
-          '（请确认服务名 ' + config.CLOUD_CONTAINER_SERVICE + ' 已部署且开启公网访问）'))
+          '（请确认服务名 ' + config.CLOUD_CONTAINER_SERVICE + ' 已部署；' +
+          '若超时，多半是缩容到 0 后的冷启动，重试一次即可）'))
       }
     })
   })
@@ -263,7 +285,7 @@ function request(options) {
     return viaCloudFunction(url, method, data)
   }
   if (config.TRANSPORT === 'cloud-container') {
-    return viaCloudContainer(url, method, data)
+    return viaCloudContainer(url, method, data, timeout)
   }
   return viaRequest(url, method, data, timeout)
 }

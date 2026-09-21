@@ -22,7 +22,7 @@ miniprogram/
 ├── app.js / app.json / app.wxss      # 小程序入口、路由、全局样式
 ├── project.config.json               # 项目配置（appid、编译设置、云函数根目录）
 ├── sitemap.json
-├── config/index.js                   # TRANSPORT 传输方式、后端地址、超时、云环境 ID、AI 标识文案
+├── config/index.js                   # TRANSPORT 传输方式、后端地址、超时、两个云环境 ID、AI 标识文案
 ├── utils/
 │   ├── request.js                    # 请求层：直连 / 云函数 / 云托管三通道 + 错误翻译
 │   ├── format.js                     # 日期 / 时长 / 金额格式化
@@ -73,6 +73,9 @@ python run.py                     # 监听 http://localhost:8000
 `TRANSPORT` 决定，改一个字符串即可切换；三者对上层完全透明
 （统一收拢在 `utils/request.js`，返回值契约一致）。
 
+> **只想让体验版在手机上跑起来** → 直接看 **C. `cloud-container`**（免备案域名，最省事）。
+> A 只适用于开发者工具，B 需要后端已有公网地址。
+
 | TRANSPORT | 通道 | 适用场景 | 需要登记 request 合法域名 |
 | --- | --- | --- | --- |
 | `'direct'`（默认） | `wx.request` | 开发者工具本地调试 | 否（工具内关闭校验即可） |
@@ -113,13 +116,29 @@ python run.py                     # 监听 http://localhost:8000
 内容为云函数不存在。原始错误码是 **`-501000 FUNCTION_NOT_FOUND`**（旧版本可能是 `-404011`），
 `utils/request.js` 会把它翻译成「请上传并部署」的提示。
 
-**C. `cloud-container` —— 微信云托管（生产推荐）**
+**C. `cloud-container` —— 微信云托管（真机 / 体验版推荐）**
 
-把后端（含 Dockerfile）部署到 CloudBase 云托管，`callContainer` 同样不走域名校验，
-且没有云函数那层 60 秒天花板与冷启动转发开销。启用步骤：
+把后端（含 Dockerfile）部署到**微信云托管**（https://cloud.weixin.qq.com ，**独立控制台**），
+`callContainer` 同样不走域名校验，且没有云函数那层 60 秒天花板与冷启动转发开销。
+**这是让体验版在手机上真正跑通的路径** —— `direct` 在真机必须用已备案的 https 域名，走不通。
 
-1. 云开发控制台 →「云托管」新建服务，服务名与 `config/index.js` 的 `CLOUD_CONTAINER_SERVICE` 一致（默认 `trip-api`）。
-2. 把 `config/index.js` 的 `TRANSPORT` 改成 `'cloud-container'`。
+启用步骤（简述，完整版含排错表见
+**[`../backend/DEPLOY-CLOUDRUN.md`](../backend/DEPLOY-CLOUDRUN.md)**）：
+
+1. 微信云托管控制台新建环境 → 复制**环境 ID**（形如 `prod-xxxxxxxx`）。
+2. 新建服务，服务名填 `trip-api`；上传 `backend/`（Dockerfile 在那一层），端口填 `80`。
+3. 配环境变量（`AMAP_API_KEY` / `LLM_API_KEY` / `AUTH_MODE=openid` / `ENABLE_DOCS=false`），
+   健康检查路径填 `/health`，随后按需**关闭公网访问**。
+4. 改 `config/index.js` 三处：
+
+   ```js
+   var TRANSPORT = 'cloud-container'
+   var CLOUD_CONTAINER_ENV = 'prod-你的云托管环境ID'   // ⚠️ 不是 CLOUD_ENV
+   var CLOUD_CONTAINER_SERVICE = 'trip-api'
+   ```
+
+⚠️ **不要去云开发控制台找云托管** —— 官方 FAQ 原文：「微信云托管和微信云开发是两套独立体系，
+微信云托管的环境只能在微信云托管控制台看到」。见下文第 5 节。
 
 **D. 若坚持真机直连后端**
 
@@ -143,27 +162,38 @@ python run.py                     # 监听 http://localhost:8000
 
 真机若仍超时，优先减少旅行天数；持续偏慢则检查 LLM 与高德 MCP 的网络状况。
 
-### 5. 云开发（CloudBase）环境
+### 5. 云环境：两个 ID，别混用
 
-环境 ID 只在 **`config/index.js` 的一处**维护，`app.js` 的 `globalData.env` 由它派生
-（避免同一份配置存两份）：
+`config/index.js` 里维护**两个**环境 ID，它们来自**两个不同的控制台**
+（官方 FAQ：微信云托管和微信云开发是两套独立体系，环境互不可见）：
+
+| 常量 | 属于 | 形如 | 谁在用 |
+| --- | --- | --- | --- |
+| `CLOUD_ENV` | 微信云开发 | `cloud1-xxxxxxxx` | `wx.cloud.init` / 云数据库（见 5.1） |
+| `CLOUD_CONTAINER_ENV` | 微信云托管 | `prod-xxxxxxxx` | `callContainer`（见上文 3.C） |
 
 ```js
 // config/index.js
-var CLOUD_ENV = 'cloud1-d5gan8twf7e51b2cf'
+var CLOUD_ENV = 'cloud1-d5gan8twf7e51b2cf'   // 云开发：云数据库用
+var CLOUD_CONTAINER_ENV = ''                  // 云托管：callContainer 用，模板里留空
 ```
+
+`app.js` 的 `globalData.env` 由前者派生：
 
 ```js
 // app.js
 var config = require('./config/index')
 globalData: {
-  env: config.CLOUD_ENV,   // 唯一来源
+  env: config.CLOUD_ENV,   // 云开发环境，云数据库用
   lastPlan: null
 }
 ```
 
 `onLaunch` 中会执行 `wx.cloud.init({ env: this.globalData.env, traceUser: true })`。
 初始化失败**只打日志、不阻断启动**（`initCloud()` 内 try/catch），避免云侧问题把整个小程序带崩。
+
+`CLOUD_CONTAINER_ENV` 留空时 `utils/request.js` 会回退使用 `CLOUD_ENV` 并打一条 `console.warn`；
+这只是尽力而为的兜底 —— 两个环境通常并不相同，混用会报 `-601002` / 环境不存在。
 
 相关配置：
 
@@ -315,7 +345,7 @@ node tools/test-error-translate.js
 | `TRANSPORT = 'direct'` 端到端 | 填表 → 提交 → 四阶段进度（搜索景点 / 查询天气 / 推荐酒店 / 生成行程）→ **16~24s** 跳转结果页；地图 marker 3~4 个 + 折线，坐标真实（故宫 `39.9163,116.3972`）；**console 与未捕获异常均为空** |
 | `TRANSPORT = 'cloud-function'`（云函数尚未部署） | 请求确实打到云上（返回带 `callId` 与 `trace` 的 `-501000`），说明分支切换与错误翻译都生效；弹窗内容为**一句可照做的短句**（「云函数不存在或未部署：…上传并部署…」），原始报错完整保留在 console |
 | 失败弹窗 | 确认 `pages/index/index.js` 请求失败分支**真的弹出原生对话框**；`transport-modal.png` 是带弹窗的截图 |
-| 错误翻译单测 | `tools/test-error-translate.js` 13 项全通过（把实测原始 `errMsg` 喂进去，断言输出短、无 `callId`/`trace`/链接、且不破坏既有映射） |
+| 错误翻译单测 | `tools/test-error-translate.js` 15 项全通过（把实测原始 `errMsg` 喂进去，断言输出短、无 `callId`/`trace`/链接、且不破坏既有映射；含「callContainer 用哪个环境 ID」2 项） |
 | `TRANSPORT = 'direct'` 复跑（最终状态） | 18s 跳结果页，无弹窗、无异常 |
 | 云函数 `proxyTrip` 部署 | 部署成功（filesCount 3 / packSize 4.0KB）；`config.json` 超时 60s 已生效 |
 | 云函数仅做转发（无副作用入口） | 建集合用的临时 `action=initCollection` 分支**已移除并重新部署**；再以此参数调用返回 `{ok:false, error:"云函数未配置后端地址…"}`，证明该指令已不被接受 |
@@ -324,8 +354,9 @@ node tools/test-error-translate.js
 | 生成→上云 / 清除→删云 / 不重复上传 | **8/8 通过**：生成后云端 1 条且本地记下 `cloudId`；清除后云端 1→0 且本地缓存与历史条目一并消失；重载首页云端条数保持 1（未重复上传），`historySource = 'cloud'` |
 | 语法 | `miniprogram/**/*.js`（12 个，含云函数与 `tools/` 两个自测脚本）全部 `node --check` 通过 |
 | 离线自测 · 视图模型 | `node tools/check-plan-transform.js` 全部通过（含新增的「复制文本带 AI 标识」2 项断言） |
-| 离线自测 · 错误翻译 | `node tools/test-error-translate.js` 全部通过（13 项，样本取自实测原始报错） |
+| 离线自测 · 错误翻译 | `node tools/test-error-translate.js` 全部通过（15 项，样本取自实测原始报错） |
 | AI 标识（模拟器实测） | 18 项全通过：首屏可见（概览区 `.hero-ai-tag` top=101、内容区 `.ai-notice` top=236，视口高 753）、底部 `.ai-disclaimer` 高度 62px；**真点「复制行程」并包装 `wx.setClipboardData` 抓取实际剪贴板内容**，确认末尾为 `—— AI 生成 ——` + 免责声明 |
+| 云托管通道的环境 ID 拆分（离线） | `resolveContainerEnv()` 已配 `CLOUD_CONTAINER_ENV` 时返回它、未配时回退 `CLOUD_ENV`，**2/2 通过**。这条把「云托管环境 ≠ 云开发环境」钉成回归用例 |
 
 ### 验证手法上的几个坑（都会让结论失真）
 
@@ -370,3 +401,8 @@ node tools/test-error-translate.js
 - **无 tabBar**：首页 → 结果页是线性流程，且结果依赖本次生成的数据，不做 tab 拆分。
 - **结果页数据优先取本地缓存**：行程同时双写云数据库（见 5.1），换设备后首页可见；
   但结果页本身仍只读本地缓存，需从首页进入。
+- **`TRANSPORT` 默认仍是 `'direct'`**：本地开发开箱即用，但**上传体验版前必须改成 `'cloud-container'`**
+  并填入云托管环境 ID，否则真机必然报「合法域名」错误（`localhost` 指手机自己 + 域名强制校验）。
+  这个默认值是为了「clone 下来就能在工具里跑通」，不是遗忘。
+- **体验版只能给体验成员看**：个人主体约 15 个名额，二维码印在简历上面试官扫不开。
+  对外展示改用仓库 `docs/` 里的界面截图 / 录屏，或走正式发布（需小程序审核）。
