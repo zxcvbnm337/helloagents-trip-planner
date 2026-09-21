@@ -46,6 +46,28 @@ class Settings(BaseSettings):
     # 日志配置
     log_level: str = "INFO"
 
+    # ---------------- 访问控制 ----------------
+    # off      : 全部放行（本地开发默认）
+    # api_key  : 校验 X-API-Key 或 Authorization: Bearer
+    # openid   : 取微信云托管注入的 X-WX-OPENID 作为身份（小程序部署场景）
+    auth_mode: str = "off"
+
+    # api_key 模式下允许的密钥，逗号分隔（便于轮换期同时保留新旧两个）
+    api_keys: str = ""
+
+    # openid 模式下可选：若配置了，则额外要求 X-Gateway-Secret 匹配。
+    # 必要性：X-WX-OPENID 由云托管网关注入，但若服务同时可从公网直连，
+    # 该请求头是可被伪造的，此时必须再加一层只有网关/客户端知道的密钥。
+    gateway_secret: str = ""
+
+    # 限流：按身份维度、每分钟允许的请求数
+    rate_limit_per_minute: int = 30
+    # 「生成行程」是昂贵端点（4 个 Agent + LLM + 高德配额），单独收紧
+    rate_limit_plan_per_minute: int = 6
+
+    # 生产环境建议关闭 /docs 与 /redoc，减少信息暴露
+    enable_docs: bool = True
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -54,6 +76,10 @@ class Settings(BaseSettings):
     def get_cors_origins_list(self) -> List[str]:
         """获取CORS origins列表"""
         return [origin.strip() for origin in self.cors_origins.split(',')]
+
+    def get_api_keys_list(self) -> List[str]:
+        """获取允许的 API Key 列表（已去空白、过滤空项）"""
+        return [k.strip() for k in self.api_keys.split(',') if k.strip()]
 
 
 # 创建全局配置实例
@@ -83,6 +109,29 @@ def validate_config():
         error_msg = "配置错误:\n" + "\n".join(f"  - {e}" for e in errors)
         raise ValueError(error_msg)
 
+    # 访问控制相关的配置自检
+    auth_mode = (settings.auth_mode or "off").strip().lower()
+    if auth_mode not in ("off", "api_key", "openid"):
+        raise ValueError(
+            f"配置错误:\n  - AUTH_MODE 取值非法: {settings.auth_mode}（应为 off / api_key / openid）"
+        )
+
+    if auth_mode == "api_key" and not settings.get_api_keys_list():
+        raise ValueError("配置错误:\n  - AUTH_MODE=api_key 但未配置 API_KEYS，所有请求都会被拒绝")
+
+    if auth_mode == "off":
+        warnings.append(
+            "AUTH_MODE=off —— 当前任何人都能调用本服务（会消耗 LLM 与高德配额）。"
+            "对外部署请设为 api_key 或 openid"
+        )
+    if auth_mode == "openid" and not settings.gateway_secret:
+        warnings.append(
+            "AUTH_MODE=openid 但未配置 GATEWAY_SECRET —— 若本服务可从公网直连，"
+            "X-WX-OPENID 可被伪造，建议补上该密钥"
+        )
+    if settings.enable_docs and not settings.debug:
+        warnings.append("非调试模式下仍开放 /docs 与 /redoc，对外部署建议设 ENABLE_DOCS=false")
+
     if warnings:
         print("\n⚠️  配置警告:")
         for w in warnings:
@@ -108,4 +157,15 @@ def print_config():
     print(f"LLM Base URL: {llm_base_url}")
     print(f"LLM Model: {llm_model}")
     print(f"日志级别: {settings.log_level}")
+
+    # 访问控制状态（便于确认「防护到底开没开」）
+    auth_mode = (settings.auth_mode or "off").strip().lower()
+    auth_desc = {
+        "off": "关闭（任何人可调用）",
+        "api_key": f"API Key（已配置 {len(settings.get_api_keys_list())} 个）",
+        "openid": "微信 openid" + ("+网关密钥" if settings.gateway_secret else "（无网关密钥）"),
+    }.get(auth_mode, f"未知({settings.auth_mode})")
+    print(f"访问控制: {auth_desc}")
+    print(f"限流: {settings.rate_limit_per_minute} 次/分（生成行程 {settings.rate_limit_plan_per_minute} 次/分）")
+    print(f"API 文档: {'已开启' if settings.enable_docs else '已关闭'}")
 

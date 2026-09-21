@@ -4,20 +4,28 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ..config import get_settings, validate_config, print_config
 from .routes import trip, poi, map as map_routes
+from .security import AccessGuardMiddleware
 
 # 获取配置
 settings = get_settings()
 
 # 创建FastAPI应用
+# 生产环境建议设 ENABLE_DOCS=false：/docs 会暴露全部接口结构
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="基于HelloAgents框架的智能旅行规划助手API",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None
 )
 
-# 配置CORS
+# ⚠️ 中间件添加顺序 = 由内到外。后添加的在更外层。
+# AccessGuard 先加（内层），CORS 后加（外层）—— 这样鉴权中间件返回的 401/429
+# 同样会经过 CORS 处理并带上跨域响应头；若反过来，浏览器只会看到跨域失败，
+# 看不到真正的 401，排查时会非常费解。
+app.add_middleware(AccessGuardMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins_list(),

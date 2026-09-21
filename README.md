@@ -23,6 +23,8 @@
 | 5 | 行程只存本地缓存，**换设备就没了** | 新增云数据库双写层：本地 `Storage` + 云数据库集合 `trips`，并做优雅降级 | 换设备 / 清缓存后仍能看到自己的行程 |
 | 6 | 底层报错又长又脏（含 `callId` / `trace` / 文档链接），直接弹给用户满屏乱码 | 错误分层：已知错误精确映射 + 未知错误保守清洗，**弹窗只给人话、原文进日志** | 弹窗变成一句可照做的短句 |
 | 7 | `frontend/.gitignore` 漏忽略 `.env`；两个 `.env.example` 里被误填了真实密钥 | 补齐 gitignore 并加根级兜底；密钥还原为占位符 | 仓库不再有明文密钥 |
+| 8 | 接口**无任何防护**：任何人拿到地址即可调用，一次请求烧掉 4 个 Agent 的 LLM 与高德配额 | 新增 `AUTH_MODE` 三态鉴权（`off` / `api_key` / `openid`）+ 按身份的内存限流，「生成行程」单独收紧阈值 | 38 项离线测试全绿（`backend/tests/`） |
+| 9 | 只有「本机跑通」的说明，没有可交付的部署形态；MCP 冷启动会把首个请求拖到几十秒 | 多阶段 `Dockerfile`，构建期 `uv tool install amap-mcp-server` 预热；`.dockerignore` 确保密钥不进镜像层 | 冷启动成本只在构建期付一次 |
 
 ---
 
@@ -118,6 +120,27 @@
 小程序没有 DOM，所以 Web 端那套「截图 / 导出 PDF」整体不可用，改为复制纯文本 + 转发分享。
 这是平台能力边界决定的，不是实现取舍。
 
+### 7. 鉴权用「三态开关」而不是写死一套
+
+本地开发不该被鉴权打扰，对外部署又必须收紧——这两件事的目标是冲突的。所以做成一个开关：
+
+| `AUTH_MODE` | 身份来源 | 适用场景 |
+| --- | --- | --- |
+| `off`（默认） | 客户端 IP | 本地开发 |
+| `api_key` | `X-API-Key` 或 `Authorization: Bearer` | 任意公网部署 |
+| `openid` | 云托管网关注入的 `X-WX-OPENID` | 微信小程序（**天然免自建登录**） |
+
+两个刻意的细节：
+
+- **`openid` 模式额外提供 `GATEWAY_SECRET`**。`X-WX-OPENID` 由网关注入，但若服务同时能从公网直连，
+  这个头就是可伪造的——多配一个只有网关知道的密钥，才能把「来自网关」变成一次真实的凭据校验。
+- **密钥比较走 `secrets.compare_digest`**，避免通过响应耗时逐位猜测密钥；限流的内存 key 用哈希指纹，
+  密钥原文不进入内存与日志。
+
+限流按身份分桶，「生成行程」是昂贵端点（4 个 Agent + LLM + 高德配额）所以用独立且更严的阈值。
+⚠️ 计数器在**进程内存**里，只对单实例精确；多副本部署下实际放行量会变成「阈值 × 副本数」，
+要精确必须换 Redis。这条边界写在 `app/api/security.py` 的模块注释里，没有藏起来。
+
 ---
 
 ## 五、快速开始
@@ -136,6 +159,34 @@ python run.py                     # 监听 http://localhost:8000
 启动后访问 `/docs` 查看 API 文档，`/health` 返回 `healthy` 表示就绪。
 
 > 首次调用会由 `uvx amap-mcp-server` 拉起高德 MCP 服务，需要网络且有一定冷启动耗时。
+
+自测（**离线**：不起服务、不联网、不消耗任何配额、不读取 `.env`）：
+
+```bash
+python tests/test_access_control.py     # 38 项：鉴权三态 / 限流 / CORS 交互 / 配置自检
+```
+
+### 部署（Docker）
+
+构建上下文是 `backend/` 这一层（`Dockerfile` 与 `.dockerignore` 都在那里）：
+
+```bash
+docker build -t trip-api ./backend
+docker run --rm -p 8000:8000 --env-file backend/.env -e PORT=8000 trip-api
+```
+
+镜像里**不含任何密钥**——`.env` 已被 `.dockerignore` 排除，密钥一律运行时注入。
+镜像分层是持久的，密钥一旦被烤进某一层，即便后续删除也仍能从历史层里翻出来。
+
+`Dockerfile` 有两处值得说明：
+
+- **多阶段构建**：编译工具链（`build-essential`）只存在于构建阶段，不进最终镜像。
+- **构建期预热 MCP**：`uv tool install amap-mcp-server`。`uvx` 首次运行要现下载包并建环境，
+  会把「第一笔请求」拖长到几十秒，很容易撞上云托管的请求超时。先装好就只付一次。
+  （依据：MCP SDK 的 stdio 客户端启动子进程时用 `{**get_default_environment(), **server.env}`，
+  其白名单在 Linux 下包含 `PATH` 与 `HOME`，因此容器内能找到 `uvx` 并定位到 uv 的工具目录。）
+
+生产环境建议同时设 `AUTH_MODE` 与 `ENABLE_DOCS=false`。
 
 ### Web 版
 
@@ -168,6 +219,12 @@ node tools/check-plan-transform.js   # 离线自测，不依赖开发者工具
 | `LLM_MODEL_ID` | 可选 | 模型名 |
 | `CORS_ORIGINS` | 可选 | 逗号分隔，默认放行本地 5173 / 3000 |
 | `UNSPLASH_ACCESS_KEY` | 可选 | 景点配图，未配置则跳过 |
+| `AUTH_MODE` | 可选 | `off`（默认）/ `api_key` / `openid`，见「设计决策 7」 |
+| `API_KEYS` | 条件 | `AUTH_MODE=api_key` 时必填。逗号分隔以支持轮换期新旧并存 |
+| `GATEWAY_SECRET` | 可选 | `AUTH_MODE=openid` 时强烈建议填，防止 `X-WX-OPENID` 被伪造 |
+| `RATE_LIMIT_PER_MINUTE` | 可选 | 默认 30。**设为 0 表示不限流** |
+| `RATE_LIMIT_PLAN_PER_MINUTE` | 可选 | 默认 6。`/api/trip/plan` 的独立阈值 |
+| `ENABLE_DOCS` | 可选 | 默认 `true`。对外部署建议设 `false`，减少信息暴露 |
 
 真实密钥**只应存在于 `.env`**（已被 gitignore），仓库里只提交 `.env.example` 占位符。
 
@@ -182,6 +239,7 @@ helloagents-trip-planner/
 │   │   ├── agents/trip_planner_agent.py   # 多智能体编排 + 并发 + JSON 解析 + 兜底计划
 │   │   ├── api/
 │   │   │   ├── main.py                    # 应用装配、CORS、健康检查
+│   │   │   ├── security.py                # 鉴权（三态）+ 限流 + 访问控制中间件
 │   │   │   └── routes/
 │   │   │       ├── trip.py                # POST /api/trip/plan  ← 核心接口
 │   │   │       ├── map.py                 # 路线 / 天气
@@ -192,6 +250,9 @@ helloagents-trip-planner/
 │   │   │   └── unsplash_service.py        # 景点配图
 │   │   ├── models/schemas.py              # Pydantic 请求/响应模型
 │   │   └── config.py                      # pydantic-settings 配置
+│   ├── tests/test_access_control.py       # 离线自测（38 项，无需 pytest / 网络 / 密钥）
+│   ├── Dockerfile                         # 多阶段构建 + 构建期预热 MCP
+│   ├── .dockerignore                      # 确保 .env 不进镜像层
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/                       # Vue 3 + TS + Vite + Ant Design Vue
@@ -221,8 +282,11 @@ helloagents-trip-planner/
   目前 `return [] / {}`（带 TODO）。**真实能力全部走 Agent 链路**，这几个端点主要用于占位与后续扩展。
 - **单次请求同步等待 17~25s**：没有做任务化 + 轮询，用户需停留在页面。生产化应改为
   「提交 → 返回任务 ID → 轮询结果」。
-- **无鉴权与限流**：当前任何人拿到地址即可调用，会消耗 LLM 与高德配额。计划在生产部署时
-  接入身份校验与速率限制。
+- **限流只在单实例内精确**：计数器在进程内存里，多副本部署下实际放行量会变成「阈值 × 副本数」，
+  重启即清零。要精确限流需换成 Redis 之类的共享存储。
+- **`openid` 模式的信任边界**：身份来自云托管网关注入的 `X-WX-OPENID`；若服务同时可从公网直连，
+  该头可被伪造，必须配置 `GATEWAY_SECRET` 才能闭合这个缺口。
+- **行程缺少归属校验**：按 ID 取行程时不校验调用者身份，尚未做「只能看自己的行程」的细粒度授权。
 - **`travel_days` 存在双份真相**：前端由日期差值算出、后端独立接收，需要收敛为单一来源。
 - **导出能力降级**：小程序侧未实现图片版行程（可用 canvas 2d 手绘，成本较高）。
 - **Pydantic v1 风格残留**：`Field(example=...)` 与 `class Config` 在 v2 下应改为

@@ -1,0 +1,38 @@
+# 构建上下文排除项。目标是让镜像里只有「应用代码 + 依赖」，
+# 不要把本机的虚拟环境、密钥、缓存打进去。
+#
+# ⚠️ 最关键的一条是 .env —— 别把真实密钥烧进镜像层，
+# 镜像层一旦推送到仓库/镜像服务，即使后续删除也仍可在历史层里翻出来。
+# 运行时密钥一律用环境变量注入。
+
+# 密钥与本地环境文件
+.env
+.env.*
+!.env.example
+
+# Python 虚拟环境与缓存
+venv/
+.venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 版本控制与编辑器
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp
+
+# 本文件自身
+.dockerignore
+Dockerfile
