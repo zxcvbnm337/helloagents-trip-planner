@@ -203,6 +203,38 @@
   color: #9aa1b1;
 }
 
+/* ---------- AI 生成内容标识 ----------
+ * 显式标识要求「显著」：给一点底色和边框，让它是一块能被看见的提示，
+ * 而不是混在灰色小字里的一句话。
+ */
+.ai-notice {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 28rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f4f2ff;
+  border: 2rpx solid #e2ddfa;
+}
+
+.ai-badge {
+  flex: none;
+  padding: 4rpx 14rpx;
+  margin-right: 16rpx;
+  border-radius: 10rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ai-notice-text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #6b6a86;
+}
+
 /* ---------- 生成中 ---------- */
 .progress-page {
   display: flex;

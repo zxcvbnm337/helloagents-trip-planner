@@ -1,5 +1,6 @@
 var planUtil = require('../../utils/plan')
 var storage = require('../../utils/storage')
+var AI_LABEL = require('../../config/index').AI_LABEL
 
 // 没有坐标数据时的兜底中心点（天安门），仅用于让 map 组件有个合法初值
 var DEFAULT_LAT = 39.90923
@@ -21,7 +22,12 @@ Page({
     mapScale: 11,
     markers: [],
     polyline: [],
-    includePoints: []
+    includePoints: [],
+
+    // AI 生成内容标识（文案来源见 config/index.js，勿在此硬编码）
+    aiBadge: AI_LABEL.badge,
+    aiNotice: AI_LABEL.notice,
+    aiDisclaimer: AI_LABEL.disclaimer
   },
 
   onLoad: function () {

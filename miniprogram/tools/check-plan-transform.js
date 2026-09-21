@@ -183,6 +183,9 @@ var text = planUtil.buildPlainText(plan)
 check('纯文本非空', text.length > 0, true)
 check('纯文本包含第 1 天', text.indexOf('【第 1 天】') > -1, true)
 check('纯文本包含门票信息', text.indexOf('门票 ¥60') > -1, true)
+// 复制出去的文本等于「内容离开小程序」，AI 标识必须跟着走
+check('纯文本带 AI 生成标识', text.indexOf('AI 生成') > -1, true)
+check('纯文本带免责声明', text.indexOf('不构成出行建议') > -1, true)
 
 // ---------- 边界 ----------
 console.log('\n[边界情况]')

@@ -131,6 +131,12 @@
       <button class="btn-primary submit" bindtap="onSubmit" disabled="{{loading}}">开始规划我的旅行</button>
       <view class="foot-tip">单次生成约需 20 - 30 秒（随天数波动），期间请保持页面在前台</view>
 
+      <!-- AI 生成内容标识：提交前先告知，避免用户对结果来源产生误解 -->
+      <view class="ai-notice">
+        <text class="ai-badge">{{aiBadge}}</text>
+        <text class="ai-notice-text">{{aiNotice}}</text>
+      </view>
+
     </view>
   </block>
 

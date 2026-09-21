@@ -139,6 +139,29 @@ class Budget(BaseModel):
     total: int = Field(default=0, description="总费用")
 
 
+class AILabel(BaseModel):
+    """AI 生成内容标识（API 侧的机器可读部分）。
+
+    依据《人工智能生成合成内容标识办法》，生成合成内容应包含两类标识：
+    - 显式标识：面向用户的可见提示 —— 由各前端渲染（文案见 miniprogram/config/index.js）。
+    - 隐式标识：便于识别的元数据 —— 即本模型，随 API 响应一起下发。
+
+    放在响应里而不是写死在客户端的价值：客户端拿到的是「这段内容是否由 AI 生成」的
+    事实声明（`is_ai_generated`），而不是靠约定假设；将来若引入非 AI 内容（如人工
+    编辑过的行程模板），前端可以据此决定是否展示标识，无需改动代码逻辑。
+    """
+    is_ai_generated: bool = Field(default=True, description="本内容是否由 AI 生成")
+    producer: str = Field(default="智能旅行助手", description="生成合成服务提供者名称")
+    label: str = Field(default="AI 生成", description="面向用户展示的短标识")
+    disclaimer: str = Field(
+        default=(
+            "本行程由 AI 自动生成，仅供参考，不构成出行建议；"
+            "景点开放时间、票价、交通与天气请以官方最新信息为准。"
+        ),
+        description="免责声明全文",
+    )
+
+
 class TripPlan(BaseModel):
     """旅行计划"""
     city: str = Field(..., description="目的地城市")
@@ -148,6 +171,8 @@ class TripPlan(BaseModel):
     weather_info: List[WeatherInfo] = Field(default=[], description="天气信息")
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
+    # 有默认值 —— 不改变既有调用方行为，但对新客户端是可读的元数据
+    ai_label: AILabel = Field(default_factory=AILabel, description="AI 生成内容标识")
 
 
 class TripPlanResponse(BaseModel):

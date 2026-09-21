@@ -25,6 +25,7 @@
 | 7 | `frontend/.gitignore` 漏忽略 `.env`；两个 `.env.example` 里被误填了真实密钥 | 补齐 gitignore 并加根级兜底；密钥还原为占位符 | 仓库不再有明文密钥 |
 | 8 | 接口**无任何防护**：任何人拿到地址即可调用，一次请求烧掉 4 个 Agent 的 LLM 与高德配额 | 新增 `AUTH_MODE` 三态鉴权（`off` / `api_key` / `openid`）+ 按身份的内存限流，「生成行程」单独收紧阈值 | 38 项离线测试全绿（`backend/tests/`） |
 | 9 | 只有「本机跑通」的说明，没有可交付的部署形态；MCP 冷启动会把首个请求拖到几十秒 | 多阶段 `Dockerfile`，构建期 `uv tool install amap-mcp-server` 预热；`.dockerignore` 确保密钥不进镜像层 | 冷启动成本只在构建期付一次 |
+| 10 | AI 生成的内容没有任何标识，用户无从判断行程出处，也不符合《人工智能生成合成内容标识办法》 | 显式标识（首页 + 结果页顶部 + 底部免责声明）+ 隐式标识（`TripPlan.ai_label` 元数据）；**复制出去的纯文本同样带标识** | 标识随内容走，不会在导出时丢失 |
 
 ---
 
@@ -140,6 +141,22 @@
 限流按身份分桶，「生成行程」是昂贵端点（4 个 Agent + LLM + 高德配额）所以用独立且更严的阈值。
 ⚠️ 计数器在**进程内存**里，只对单实例精确；多副本部署下实际放行量会变成「阈值 × 副本数」，
 要精确必须换 Redis。这条边界写在 `app/api/security.py` 的模块注释里，没有藏起来。
+
+### 8. AI 生成标识：显式给人看，隐式给机器读
+
+依据《人工智能生成合成内容标识办法》，生成合成内容要同时具备两类标识：
+
+- **显式标识**（给人看）：要求**显著且持续可见**，不能藏在角落小字里、也不能只提示一次。
+  落在四处 —— 首页提交前告知、结果页概览区小标、内容区顶部常驻提示条、页面底部完整免责声明。
+- **隐式标识**（给机器读）：`TripPlan.ai_label` 元数据随 API 下发，含 `is_ai_generated` /
+  `producer` / `label` / `disclaimer`。客户端因此拿到的是「这段内容是否由 AI 生成」的**事实声明**，
+  而不是靠约定假设；将来若引入人工编辑的行程，前端可据此决定是否展示标识。
+
+一个容易漏的点：**「复制行程」导出的纯文本也要带标识**。内容一旦被粘贴到微信或文档里，
+就脱离了小程序的控制范围 —— 标识必须跟着内容走，否则收到的人无从知道它出自 AI。
+这条已经写进离线自测，防止后续改动把它悄悄去掉。
+
+文案的唯一来源是 `miniprogram/config/index.js` 的 `AI_LABEL`，不在页面里硬编码。
 
 ---
 
@@ -261,13 +278,14 @@ helloagents-trip-planner/
 │       ├── views/Result.vue               # 行程 / 地图 / 预算
 │       └── services/api.ts
 ├── miniprogram/                    # 微信小程序（等价实现，复用后端）
-│   ├── config/index.js                    # TRANSPORT 开关、BASE_URL、云环境 ID
+│   ├── config/index.js                    # TRANSPORT 开关、BASE_URL、云环境 ID、AI 标识文案
 │   ├── utils/
 │   │   ├── request.js                     # 三通道 + 错误翻译
 │   │   ├── cloudStore.js                  # 云数据库双写与降级
 │   │   ├── storage.js                     # 本地缓存
 │   │   └── plan.js                        # TripPlan → 视图模型（WXML 不能调函数）
 │   ├── pages/{index,result}/
+│   ├── tools/                             # 两个离线自测脚本（不需要开发者工具）
 │   └── cloudfunctions/proxyTrip/          # 后端中转云函数
 └── README.md
 ```

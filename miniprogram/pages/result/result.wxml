@@ -15,6 +15,7 @@
         <text>{{plan.travelDays}} 天</text>
         <text class="dot">·</text>
         <text>{{plan.attractionCount}} 个景点</text>
+        <text class="hero-ai-tag">{{aiBadge}}</text>
       </view>
       <view class="hero-budget" wx:if="{{plan.budget}}">
         <text class="hero-budget-label">预估总花费</text>
@@ -23,6 +24,12 @@
     </view>
 
     <view class="container">
+
+      <!-- AI 生成内容标识（显式标识，常驻在内容区顶部） -->
+      <view class="ai-notice">
+        <text class="ai-badge">{{aiBadge}}</text>
+        <text class="ai-notice-text">{{aiNotice}}</text>
+      </view>
 
       <!-- 天气 -->
       <view class="card" wx:if="{{plan.hasWeather}}">
@@ -161,6 +168,9 @@
         <button class="btn-primary action" bindtap="onRegenerate">重新规划</button>
       </view>
       <view class="foot-tip">行程保存在本机，仅当前设备可见</view>
+
+      <!-- AI 生成内容标识：完整免责声明，滚动到底仍然可见 -->
+      <view class="ai-disclaimer">{{aiDisclaimer}}</view>
 
     </view>
   </view>

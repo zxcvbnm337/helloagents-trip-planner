@@ -6,6 +6,7 @@
  */
 
 var format = require('./format')
+var AI_LABEL = require('../config/index').AI_LABEL
 
 var MEAL_LABELS = {
   breakfast: '早餐',
@@ -284,6 +285,10 @@ function normalizePlan(raw) {
 
 /**
  * 生成便于复制/粘贴的纯文本行程，用于「复制行程」按钮
+ *
+ * ⚠️ 末尾必须带上 AI 生成标识：这段文本会被粘贴到微信 / 备忘录 / 文档里，
+ * 也就是「内容离开了小程序」。标识跟着内容走，否则收到这段文字的人
+ * 无从知道它出自 AI。
  */
 function buildPlainText(plan) {
   if (!plan) {
@@ -342,6 +347,11 @@ function buildPlainText(plan) {
     lines.push('总体建议：')
     lines.push(plan.overallSuggestions)
   }
+
+  // AI 生成标识 —— 必须留在末尾（见函数头注释）
+  lines.push('')
+  lines.push('—— ' + AI_LABEL.badge + ' ——')
+  lines.push(AI_LABEL.disclaimer)
 
   return lines.join('\n')
 }

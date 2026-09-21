@@ -22,7 +22,7 @@ miniprogram/
 ├── app.js / app.json / app.wxss      # 小程序入口、路由、全局样式
 ├── project.config.json               # 项目配置（appid、编译设置、云函数根目录）
 ├── sitemap.json
-├── config/index.js                   # TRANSPORT 传输方式、后端地址、超时、云环境 ID
+├── config/index.js                   # TRANSPORT 传输方式、后端地址、超时、云环境 ID、AI 标识文案
 ├── utils/
 │   ├── request.js                    # 请求层：直连 / 云函数 / 云托管三通道 + 错误翻译
 │   ├── format.js                     # 日期 / 时长 / 金额格式化
@@ -35,7 +35,10 @@ miniprogram/
 ├── assets/marker.png                 # 地图标记图标
 ├── cloudfunctions/
 │   └── proxyTrip/                    # 中转云函数：绕开 request 合法域名（https）限制
-└── tools/make-marker-icon.py         # 图标的生成脚本（重新生成用）
+└── tools/
+    ├── make-marker-icon.py           # 地图图标的生成脚本（重新生成用）
+    ├── check-plan-transform.js       # 离线自测：TripPlan -> 视图模型（含 AI 标识断言）
+    └── test-error-translate.js       # 离线自测：错误翻译（样本取自实测原始报错）
 ```
 
 ## 运行步骤
@@ -265,8 +268,34 @@ system error (Error: errCode: -501000 | errMsg: FunctionName parameter ...), abo
 回归测试（离线、不需要开发者工具，含上面那段真实报错的样本）：
 
 ```bash
-node ../../../.workbuddy/tools/test-error-translate.js
+node tools/test-error-translate.js
 ```
+
+## AI 生成内容标识与免责声明
+
+依据《人工智能生成合成内容标识办法》（2025-09-01 起施行），生成合成内容需添加
+**显式标识**——以文字形式向用户提示内容由 AI 生成，且要求**显著、持续可见**：
+不能塞在角落小字里，也不能只提示一次就消失。
+
+本项目的落地方式（三处界面 + 一处导出）：
+
+| 位置 | 形式 | 目的 |
+| --- | --- | --- |
+| 首页 · 提交按钮下方 | 「AI 生成」角标 + 一句话提示 | 提交**前**先告知，避免用户对结果来源产生误解 |
+| 结果页 · 概览区 | 半透明「AI 生成」小标 | 首屏可见 |
+| 结果页 · 内容区顶部 | 常驻提示条（带底色与边框） | 进入内容区即可见 |
+| 结果页 · 页面底部 | 完整免责声明 | 滚动到底仍然可见 |
+| 「复制行程」导出的文本 | 末尾附标识 + 免责声明 | 内容**离开小程序**后标识要跟着走 |
+
+标识文案的**唯一来源**是 `config/index.js` 的 `AI_LABEL`，三个页面都从这里取，
+不在 WXML / Page 里硬编码 —— 改文案只改一处。
+
+后端侧同时下发**隐式标识**（元数据）：`TripPlan.ai_label`，含 `is_ai_generated` /
+`producer` / `label` / `disclaimer`。客户端据此知道自己拿到的是不是 AI 内容，
+而不是靠约定假设；将来若引入人工编辑的行程，前端可据此决定是否展示标识。
+
+> 回归覆盖：`node tools/check-plan-transform.js` 断言了「复制出去的纯文本必须带
+> AI 标识与免责声明」——防止后续改动把这一条悄悄去掉。
 
 ## 验证记录
 
@@ -277,15 +306,16 @@ node ../../../.workbuddy/tools/test-error-translate.js
 | `TRANSPORT = 'direct'` 端到端 | 填表 → 提交 → 四阶段进度（搜索景点 / 查询天气 / 推荐酒店 / 生成行程）→ **16~24s** 跳转结果页；地图 marker 3~4 个 + 折线，坐标真实（故宫 `39.9163,116.3972`）；**console 与未捕获异常均为空** |
 | `TRANSPORT = 'cloud-function'`（云函数尚未部署） | 请求确实打到云上（返回带 `callId` 与 `trace` 的 `-501000`），说明分支切换与错误翻译都生效；弹窗内容为**一句可照做的短句**（「云函数不存在或未部署：…上传并部署…」），原始报错完整保留在 console |
 | 失败弹窗 | 确认 `pages/index/index.js` 请求失败分支**真的弹出原生对话框**；`transport-modal.png` 是带弹窗的截图 |
-| 错误翻译单测 | `.workbuddy/tools/test-error-translate.js` 8 项全通过（把实测原始 `errMsg` 喂进去，断言输出短、无 `callId`/`trace`/链接、且不破坏既有映射） |
+| 错误翻译单测 | `tools/test-error-translate.js` 13 项全通过（把实测原始 `errMsg` 喂进去，断言输出短、无 `callId`/`trace`/链接、且不破坏既有映射） |
 | `TRANSPORT = 'direct'` 复跑（最终状态） | 18s 跳结果页，无弹窗、无异常 |
 | 云函数 `proxyTrip` 部署 | 部署成功（filesCount 3 / packSize 4.0KB）；`config.json` 超时 60s 已生效 |
 | 云函数仅做转发（无副作用入口） | 建集合用的临时 `action=initCollection` 分支**已移除并重新部署**；再以此参数调用返回 `{ok:false, error:"云函数未配置后端地址…"}`，证明该指令已不被接受 |
 | 云数据库集合缺失时降级 | `trips` 未建集合 → 首页历史条显示 **「仅本机」**，结果页可正常阅读，**未捕获异常为空** |
 | 云数据库跨设备恢复 | 模拟换设备（`wx.clearStorageSync()` 清空本地）→ 首页从云端恢复，`historySource = 'cloud'`、`cloudId` 已回写本地、结果页 marker 3 个，**7/7 通过** |
 | 生成→上云 / 清除→删云 / 不重复上传 | **8/8 通过**：生成后云端 1 条且本地记下 `cloudId`；清除后云端 1→0 且本地缓存与历史条目一并消失；重载首页云端条数保持 1（未重复上传），`historySource = 'cloud'` |
-| 语法 | `miniprogram/**/*.js`（11 个，含云函数）全部 `node --check` 通过 |
-| 离线自测 | `node tools/check-plan-transform.js` 全部通过 |
+| 语法 | `miniprogram/**/*.js`（12 个，含云函数与 `tools/` 两个自测脚本）全部 `node --check` 通过 |
+| 离线自测 · 视图模型 | `node tools/check-plan-transform.js` 全部通过（含新增的「复制文本带 AI 标识」2 项断言） |
+| 离线自测 · 错误翻译 | `node tools/test-error-translate.js` 全部通过（13 项，样本取自实测原始报错） |
 
 ### 验证手法上的三个坑（都会让结论失真）
 

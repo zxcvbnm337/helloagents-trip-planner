@@ -2,6 +2,7 @@ var request = require('../../utils/request')
 var format = require('../../utils/format')
 var storage = require('../../utils/storage')
 var cloudStore = require('../../utils/cloudStore')
+var AI_LABEL = require('../../config/index').AI_LABEL
 
 var MAX_DAYS = 30
 var MAX_RANGE_DAYS = 365
@@ -55,6 +56,10 @@ Page({
     accommodationIndex: 0,
     preferenceList: buildPreferenceList([]),
     freeText: '',
+
+    // AI 生成内容标识（文案来源见 config/index.js，勿在此硬编码）
+    aiBadge: AI_LABEL.badge,
+    aiNotice: AI_LABEL.notice,
 
     loading: false,
     progress: 0,
