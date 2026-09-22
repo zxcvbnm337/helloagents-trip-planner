@@ -47,8 +47,12 @@ function describeHttpError(status, payload) {
 function summarizeRaw(text) {
   var t = String(text || '')
 
+  // 错误码有两种写法，都要认：
+  //   · 云函数 / 云开发：`errCode: -501000`
+  //   · 云托管 callContainer：`code: 102002`（实测格式，注意**不是** errCode）
+  // 只认 errCode 的话，云托管的错误码会被整段丢掉，用户看不到任何可检索的线索。
   var code = ''
-  var matched = t.match(/errCode:\s*(-?\d+)/)
+  var matched = t.match(/(?:errCode|code)\s*[:：]\s*(-?\d+)/)
   if (matched) {
     code = matched[1]
   }
@@ -58,15 +62,28 @@ function summarizeRaw(text) {
   t = t.replace(/\(trace:[^)]*\)/g, ' ')
   t = t.replace(/更多错误信息请访问[:：]?/g, ' ')
   // errCode 已经单独抽出来放在前面了，正文里再出现就是冗余
-  t = t.replace(/errCode:\s*-?\d+/gi, ' ')
+  t = t.replace(/(?:errCode|code)\s*[:：]\s*-?\d+/gi, ' ')
   t = t.replace(/errMsg:\s*/gi, ' ')
-  t = t.replace(/cloud\.callFunction:fail\s*Error:?/gi, ' ')
+  // 两种 API 的前缀都要剥，且 `Error:` 必须**可选**：
+  //   · 云函数：`cloud.callFunction:fail Error: errCode: -501000`
+  //   · 云托管：`cloud.callContainer:fail 102002 . cloud.callContainer:fail system error.`
+  //     —— 云托管这条**没有** `Error:` token，写成必选就一个都匹配不上，
+  //        前缀会被原样弹给用户（2026-09-22 实测暴露，回归用例已锁住）。
+  t = t.replace(/cloud\.call(?:Function|Container):fail(?:\s*Error:?)?/gi, ' ')
   t = t.replace(/\brequest:fail\b/gi, ' ')
   t = t.replace(/\babort\b/gi, ' ')
   t = t.replace(/\s+/g, ' ').trim()
   // 清掉残留的孤立标点（"… , )" 这种）
   t = t.replace(/^[\s:：,，|（）()\-—]+/, '')
   t = t.replace(/[\s:：,，|（）()\-—]+$/, '')
+
+  // 云托管的 errMsg 实测是**两层拼接**的，形如
+  //   `cloud.callContainer:fail 102002 . cloud.callContainer:fail system error. code: 102002`
+  // 剥掉前缀后，错误码会以裸 token 残留在最前面，与下面拼的「（102002）」重复。
+  // 只处理**开头**这一处，避免误删正文里恰好等于该数字的内容。
+  if (code && t.indexOf(code) === 0) {
+    t = t.replace(new RegExp('^' + code + '[\\s.。·,，—-]*'), '')
+  }
 
   if (t.length > 80) {
     t = t.slice(0, 80) + '…'

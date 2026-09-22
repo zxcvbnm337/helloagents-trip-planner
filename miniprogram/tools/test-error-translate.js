@@ -87,6 +87,14 @@ var UNMAPPED_CLOUD = 'cloud.callFunction:fail Error: errCode: -501999 | errMsg: 
   '更多错误信息请访问：https://docs.cloudbase.net/error-code/basic/UNKNOWN ' +
   '(callId: 1789984221103-0.99) (trace: 17:50:21 start->17:50:21 system error), abort'
 
+// 实测抓到的原文：云托管 callContainer 冷启动首调失败（2026-09-22 16:43）。
+// 两个值得注意的形态，都是这里必须锁住的：
+//   1. 错误码写的是 `code: 102002`，**不是** `errCode:` —— 只认 errCode 会整段丢掉；
+//   2. 前缀是 `cloud.callContainer:fail`，且 errMsg 由**两层拼接**而成，
+//      所以同一个前缀出现两次、错误码也出现两次。
+var REAL_CC_COLDSTART = 'cloud.callContainer:fail 102002 . ' +
+  'cloud.callContainer:fail system error. code: 102002'
+
 var tests = []
 var failed = 0
 
@@ -119,6 +127,12 @@ function maxLen(n) {
 function equals(expected) {
   return function (v) {
     return String(v) === String(expected) ? '' : ('应为 ' + JSON.stringify(expected) + '，实际 ' + JSON.stringify(v))
+  }
+}
+function occursExactlyTimes(s, n) {
+  return function (v) {
+    var count = String(v).split(s).length - 1
+    return count === n ? '' : ('应出现 ' + n + ' 次 ' + JSON.stringify(s) + '，实际 ' + count + ' 次')
   }
 }
 
@@ -169,6 +183,16 @@ function main() {
     notContains('https://'),
     notContains('callFunction'),
     notContains('errMsg:'),
+    maxLen(110)
+  ])
+
+  check('summarizeRaw(云托管冷启动首调失败·实测原文) → 抽出 102002', req.summarizeRaw(REAL_CC_COLDSTART), [
+    contains('（102002）'),
+    contains('system error'),
+    occursExactlyTimes('102002', 1),
+    notContains('callContainer'),
+    notContains('errCode'),
+    notContains('code:'),
     maxLen(110)
   ])
 
