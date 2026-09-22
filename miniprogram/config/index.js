@@ -24,7 +24,7 @@
  *                        · 这条私有链路**不受云托管「公网访问 / 内网访问」两个开关影响**，
  *                          所以两个开关最后都可以关掉，只有本小程序调得通，天然防白嫖。
  *                      需要额外填 CLOUD_CONTAINER_ENV 与 CLOUD_CONTAINER_SERVICE（见下）。
- *                      部署步骤见 backend/DEPLOY-CLOUDRUN.md。
+ *                      部署步骤见 docs/02-部署到微信云托管-真机跑通.md。
  */
 var TRANSPORT = 'cloud-container'
 

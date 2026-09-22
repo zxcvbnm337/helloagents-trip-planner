@@ -131,7 +131,7 @@ def main() -> int:
           f"两者均占用 {zip_size / SIZE_LIMIT * 100:.1f}% / {total / SIZE_LIMIT * 100:.1f}%")
     print("\n控制台填法：选择方式=手动上传代码包，端口=80，目标目录留空，"
           "Dockerfile 文件=有、名称=Dockerfile")
-    print("环境变量见 backend/DEPLOY-CLOUDRUN.md 第 4 节（⚠️ 不要填 PORT / GATEWAY_SECRET）")
+    print("环境变量见 docs/02-部署到微信云托管-真机跑通.md 第 4 节（⚠️ 不要填 PORT / GATEWAY_SECRET）")
     return 0
 
 
