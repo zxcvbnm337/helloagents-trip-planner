@@ -5,7 +5,7 @@
 >
 > **不需要 GPU、不需要买服务器、不需要买域名、不需要 ICP 备案** —— 一台电脑 + 一个微信号就能走完全流程。
 
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](#开源协议与致谢)
+[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 [![WeChat MiniProgram](https://img.shields.io/badge/WeChat-MiniProgram-07C160.svg)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/Tool-AMap%20MCP-1E90FF.svg)](https://modelcontextprotocol.io/)
@@ -307,6 +307,7 @@ helloagents-trip-planner/
 │   └── cloudfunctions/proxyTrip/          # 后端中转云函数
 │
 ├── frontend/                          # Web 版（Vue 3 + TS + Vite），可选
+├── LICENSE                            # CC BY-NC-SA 4.0（含来源署名）
 └── README.md
 ```
 
@@ -357,7 +358,7 @@ node tools/test-error-translate.js       # 16：错误翻译（样本取自实�
 
 ## 开源协议与致谢
 
-本项目遵循 **CC BY-NC-SA 4.0**。
+本项目遵循 **CC BY-NC-SA 4.0**，完整条款与来源署名见 **[`LICENSE`](LICENSE)**。
 
 - [Hello-Agents](https://github.com/datawhalechina/Hello-Agents) —— 智能体教程（本项目骨架来源）
 - [HelloAgents 框架](https://github.com/jjyaoao/HelloAgents)

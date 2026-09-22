@@ -1,0 +1,43 @@
+# 开源协议
+
+本项目采用 **CC BY-NC-SA 4.0**（署名 — 非商业性使用 — 相同方式共享 4.0 国际）。
+
+协议全文：<https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans>
+
+## 你可以
+
+- **共享** —— 以任何媒介或格式复制、发行本作品；
+- **演绎** —— 修改、转换或以本作品为基础进行创作。
+
+## 但必须遵守
+
+| 条款 | 含义 |
+| --- | --- |
+| **署名** | 必须给出适当的署名、提供指向本协议的链接，并**说明是否作出了修改** |
+| **非商业性使用** | 不得将本作品用于商业目的 |
+| **相同方式共享** | 若修改、转换或以本作品为基础进行创作，必须以**相同的协议**分发你的贡献 |
+
+## 来源署名
+
+本项目骨架来自 [Hello-Agents](https://github.com/datawhalechina/Hello-Agents)（Datawhale 出品）
+第 13 章配套示例，同样采用 CC BY-NC-SA 4.0。
+
+本仓库在其之上完成了从「本机 Demo」到「真机可用的产品」的工程化改造，
+并重写为面向新手的全流程中文指南 —— 具体改动见
+[README 的核心亮点](README.md#核心亮点)与
+[docs/01 全流程指南](docs/01-微信AI小程序开发全流程.md)。
+
+## 第三方资源
+
+| 资源 | 协议 / 说明 |
+| --- | --- |
+| [HelloAgents 框架](https://github.com/jjyaoao/HelloAgents) | 遵循其仓库自带协议 |
+| [amap-mcp-server](https://github.com/sugarforever/amap-mcp-server) | 遵循其仓库自带协议 |
+| 高德地图开放平台接口 | 使用时受[高德开放平台服务条款](https://lbs.amap.com/)约束 |
+| [Model Context Protocol](https://modelcontextprotocol.io/) | 开放协议规范 |
+| 本仓库的演示录屏与界面截图 | 本项目原创，随本协议分发 |
+
+## 免责声明
+
+本项目为技术演示，产出的行程内容由 AI 生成，**仅供参考**，不构成任何出行建议。
+使用前请自行核实景点开放时间、天气与交通信息。
