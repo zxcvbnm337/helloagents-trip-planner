@@ -1,6 +1,6 @@
 {
-  "description": "HelloAgents 智能旅行助手 · 微信小程序版",
-  "projectname": "helloagents-trip-planner",
+  "description": "AI 旅行规划助手 · 微信小程序版",
+  "projectname": "ai-trip-planner-miniprogram",
   "appid": "wx303867a6acab7d85",
   "miniprogramRoot": "./",
   "cloudfunctionRoot": "cloudfunctions/",

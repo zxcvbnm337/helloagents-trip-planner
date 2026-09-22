@@ -24,9 +24,6 @@
 | **一个可运行的产品** | 导入开发者工具即可跑，部署到微信云托管后**手机扫码就能用** |
 | **一份可照做的教程** | 👉 **[`docs/01-微信AI小程序开发全流程.md`](docs/01-微信AI小程序开发全流程.md)** —— 11 个阶段，每步都有实测数据与踩坑说明 |
 
-> 项目骨架来自 [Hello-Agents](https://github.com/datawhalechina/Hello-Agents) 教程第 13 章的配套示例。
-> 本仓库在其之上完成了从「本机 Demo」到「真机可用的产品」的全部工程化改造 —— 见下文[核心亮点](#核心亮点)。
-
 ---
 
 ## 界面预览
@@ -272,7 +269,7 @@ npm run dev                       # http://localhost:5173
 ## 项目结构
 
 ```
-helloagents-trip-planner/
+wechat-ai-miniprogram-guide/
 ├── docs/                              # 全部文档与演示素材
 │   ├── 01-微信AI小程序开发全流程.md      # ★ 主教程（从 0 到真机）
 │   ├── 02-部署到微信云托管-真机跑通.md   # 真机上线 runbook
@@ -307,7 +304,7 @@ helloagents-trip-planner/
 │   └── cloudfunctions/proxyTrip/          # 后端中转云函数
 │
 ├── frontend/                          # Web 版（Vue 3 + TS + Vite），可选
-├── LICENSE                            # CC BY-NC-SA 4.0（含来源署名）
+├── LICENSE                            # CC BY-NC-SA 4.0
 └── README.md
 ```
 
@@ -358,9 +355,8 @@ node tools/test-error-translate.js       # 16：错误翻译（样本取自实�
 
 ## 开源协议与致谢
 
-本项目遵循 **CC BY-NC-SA 4.0**，完整条款与来源署名见 **[`LICENSE`](LICENSE)**。
+本项目遵循 **CC BY-NC-SA 4.0**，完整条款见 **[`LICENSE`](LICENSE)**。
 
-- [Hello-Agents](https://github.com/datawhalechina/Hello-Agents) —— 智能体教程（本项目骨架来源）
 - [HelloAgents 框架](https://github.com/jjyaoao/HelloAgents)
 - [高德地图开放平台](https://lbs.amap.com/) / [amap-mcp-server](https://github.com/sugarforever/amap-mcp-server)
 - [Model Context Protocol](https://modelcontextprotocol.io/)

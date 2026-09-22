@@ -3,14 +3,14 @@
     <a-layout style="min-height: 100vh">
       <a-layout-header style="background: #001529; padding: 0 50px">
         <div style="color: white; font-size: 24px; font-weight: bold">
-          🌍 HelloAgents智能旅行助手
+          🌍 AI 旅行规划助手
         </div>
       </a-layout-header>
       <a-layout-content style="padding: 24px">
         <router-view />
       </a-layout-content>
       <a-layout-footer style="text-align: center">
-        HelloAgents智能旅行助手 ©2025 基于HelloAgents框架
+        AI 旅行规划助手 ©2025 · 行程内容由 AI 生成，仅供参考
       </a-layout-footer>
     </a-layout>
   </div>
